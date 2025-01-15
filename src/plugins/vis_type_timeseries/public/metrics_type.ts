@@ -30,6 +30,7 @@
 
 import { i18n } from '@osd/i18n';
 
+import { euiPaletteColorBlind } from '@elastic/eui';
 // @ts-ignore
 import { metricsRequestHandler } from './request_handler';
 import { EditorController } from './application';
@@ -53,7 +54,7 @@ export const metricsVisDefinition = {
       series: [
         {
           id: '61ca57f1-469d-11e7-af02-69e470af7417',
-          color: '#68BC00',
+          color: euiPaletteColorBlind()[0],
           split_mode: 'everything',
           split_color_mode: 'opensearchDashboards',
           metrics: [
@@ -64,6 +65,7 @@ export const metricsVisDefinition = {
           ],
           separate_axis: 0,
           axis_position: 'right',
+          axis_scale: 'normal',
           formatter: 'number',
           chart_type: 'line',
           line_width: 1,

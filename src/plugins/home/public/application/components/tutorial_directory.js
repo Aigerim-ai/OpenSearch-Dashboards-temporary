@@ -37,20 +37,25 @@ import { getServices } from '../opensearch_dashboards_services';
 
 import {
   EuiPage,
+  EuiPanel,
   EuiTabs,
   EuiTab,
   EuiFlexItem,
   EuiFlexGrid,
   EuiFlexGroup,
   EuiSpacer,
-  EuiTitle,
   EuiPageBody,
+  EuiText,
 } from '@elastic/eui';
 
 import { getTutorials } from '../load_tutorials';
-
 import { injectI18n, FormattedMessage } from '@osd/i18n/react';
 import { i18n } from '@osd/i18n';
+import { DataSourceSelector, DataSourceMenu } from '../../../../data_source_management/public';
+import {
+  MountPointPortal,
+  withOpenSearchDashboards,
+} from '../../../../opensearch_dashboards_react/public';
 
 const ALL_TAB_ID = 'all';
 const SAMPLE_DATA_TAB_ID = 'sampleData';
@@ -58,6 +63,9 @@ const SAMPLE_DATA_TAB_ID = 'sampleData';
 const homeTitle = i18n.translate('home.breadcrumbs.homeTitle', { defaultMessage: 'Home' });
 const addDataTitle = i18n.translate('home.breadcrumbs.addDataTitle', {
   defaultMessage: 'Add data',
+});
+const sampleDataTitle = i18n.translate('home.breadcrumbs.sampleDataTitle', {
+  defaultMessage: 'Sample data',
 });
 
 class TutorialDirectoryUi extends React.Component {
@@ -81,6 +89,9 @@ class TutorialDirectoryUi extends React.Component {
       selectedTabId: openTab,
       tutorialCards: [],
       notices: getServices().tutorialService.getDirectoryNotices(),
+      isDataSourceEnabled: !!getServices().dataSource,
+      isLocalClusterHidden: getServices().dataSource?.hideLocalCluster ?? false,
+      useUpdatedUX: getServices().uiSettings.get('home:useNewHomePage'),
     };
   }
 
@@ -90,14 +101,17 @@ class TutorialDirectoryUi extends React.Component {
 
   async componentDidMount() {
     this._isMounted = true;
-
-    getServices().chrome.setBreadcrumbs([
-      {
+    const { chrome } = getServices();
+    const { withoutHomeBreadCrumb } = this.props;
+    const breadcrumbs = [{ text: this.state.useUpdatedUX ? sampleDataTitle : addDataTitle }];
+    if (!withoutHomeBreadCrumb) {
+      breadcrumbs.splice(0, 0, {
         text: homeTitle,
         href: '#/',
-      },
-      { text: addDataTitle },
-    ]);
+      });
+    }
+
+    chrome.setBreadcrumbs(breadcrumbs);
 
     const tutorialConfigs = await getTutorials();
 
@@ -178,7 +192,15 @@ class TutorialDirectoryUi extends React.Component {
 
   renderTabContent = () => {
     if (this.state.selectedTabId === SAMPLE_DATA_TAB_ID) {
-      return <SampleDataSetCards addBasePath={this.props.addBasePath} />;
+      return (
+        <SampleDataSetCards
+          addBasePath={this.props.addBasePath}
+          dataSourceId={this.state.selectedDataSourceId}
+          isDataSourceEnabled={this.state.isDataSourceEnabled}
+          isLocalClusterHidden={this.state.isLocalClusterHidden}
+          useUpdatedUX={this.state.useUpdatedUX}
+        />
+      );
     }
 
     return (
@@ -207,6 +229,53 @@ class TutorialDirectoryUi extends React.Component {
             );
           })}
       </EuiFlexGrid>
+    );
+  };
+
+  onSelectedDataSourceChange = (e) => {
+    const dataSourceId = e[0] ? e[0].id : undefined;
+    this.setState({ selectedDataSourceId: dataSourceId });
+  };
+
+  renderDataSourceSelector = () => {
+    const { isDataSourceEnabled, isLocalClusterHidden, useUpdatedUX } = this.state;
+    const { toastNotifications, savedObjectsClient, application, uiSettings } = getServices();
+
+    if (!isDataSourceEnabled) {
+      return null;
+    }
+
+    if (useUpdatedUX) {
+      return (
+        <MountPointPortal
+          setMountPoint={this.props.opensearchDashboards.services.setHeaderActionMenu}
+        >
+          <DataSourceMenu
+            componentType="DataSourceSelectable"
+            componentConfig={{
+              notifications: toastNotifications,
+              savedObjects: savedObjectsClient,
+              onSelectedDataSources: this.onSelectedDataSourceChange,
+            }}
+            application={application}
+            hideLocalCluster={isLocalClusterHidden}
+            uiSettings={uiSettings}
+          />
+        </MountPointPortal>
+      );
+    }
+    return (
+      <div className="sampleDataSourceSelector">
+        <DataSourceSelector
+          savedObjectsClient={savedObjectsClient}
+          notifications={toastNotifications}
+          onSelectedDataSource={this.onSelectedDataSourceChange}
+          disabled={!isDataSourceEnabled}
+          hideLocalCluster={isLocalClusterHidden}
+          uiSettings={uiSettings}
+          compressed={true}
+        />
+      </div>
     );
   };
 
@@ -239,19 +308,41 @@ class TutorialDirectoryUi extends React.Component {
   renderHeader = () => {
     const notices = this.renderNotices();
     const headerLinks = this.renderHeaderLinks();
+    const { application } = getServices();
+    const {
+      navigation: {
+        ui: { HeaderControl },
+      },
+    } = this.props.opensearchDashboards.services;
+
+    if (this.state.useUpdatedUX) {
+      return (
+        <HeaderControl
+          controls={[
+            {
+              description: this.props.intl.formatMessage({
+                id: 'home.tutorial.card.sampleDataDescription',
+                defaultMessage: 'Explore sample data, visualizations, and dashboards.',
+              }),
+            },
+          ]}
+          setMountPoint={application.setAppDescriptionControls}
+        />
+      );
+    }
 
     return (
       <>
         <EuiFlexGroup alignItems="center">
           <EuiFlexItem>
-            <EuiTitle size="l">
+            <EuiText size="s">
               <h1>
                 <FormattedMessage
                   id="home.tutorial.addDataToOpenSearchDashboardsTitle"
                   defaultMessage="Add sample data"
                 />
               </h1>
-            </EuiTitle>
+            </EuiText>
           </EuiFlexItem>
           {headerLinks ? <EuiFlexItem grow={false}>{headerLinks}</EuiFlexItem> : null}
         </EuiFlexGroup>
@@ -260,17 +351,36 @@ class TutorialDirectoryUi extends React.Component {
     );
   };
 
-  render() {
+  renderPageBody = () => {
+    const { useUpdatedUX } = this.state;
     return (
-      <EuiPage restrictWidth={1200}>
-        <EuiPageBody component="main">
-          {this.renderHeader()}
-          <EuiSpacer size="m" />
-          <EuiTabs>{this.renderTabs()}</EuiTabs>
-          <EuiSpacer />
-          {this.renderTabContent()}
-        </EuiPageBody>
-      </EuiPage>
+      <EuiPageBody component="main">
+        {this.renderHeader()}
+        {!useUpdatedUX && <EuiSpacer size="m" />}
+        {this.renderDataSourceSelector()}
+        <EuiTabs size="s">{this.renderTabs()}</EuiTabs>
+        <EuiSpacer size={useUpdatedUX ? 's' : undefined} />
+        {this.renderTabContent()}
+      </EuiPageBody>
+    );
+  };
+
+  render() {
+    const { isDataSourceEnabled, useUpdatedUX } = this.state;
+
+    if (useUpdatedUX) {
+      return (
+        <EuiPage>
+          <EuiPanel paddingSize="m">{this.renderPageBody()}</EuiPanel>
+        </EuiPage>
+      );
+    }
+    return isDataSourceEnabled ? (
+      <EuiPanel paddingSize={'l'} style={{ width: '70%', margin: '50px auto' }}>
+        {this.renderPageBody()}
+      </EuiPanel>
+    ) : (
+      <EuiPage restrictWidth={1200}>{this.renderPageBody()}</EuiPage>
     );
   }
 }
@@ -279,6 +389,8 @@ TutorialDirectoryUi.propTypes = {
   addBasePath: PropTypes.func.isRequired,
   openTab: PropTypes.string,
   isCloudEnabled: PropTypes.bool.isRequired,
+  withoutHomeBreadCrumb: PropTypes.bool,
+  openSearchDashboards: PropTypes.object,
 };
 
-export const TutorialDirectory = injectI18n(TutorialDirectoryUi);
+export const TutorialDirectory = injectI18n(withOpenSearchDashboards(TutorialDirectoryUi));

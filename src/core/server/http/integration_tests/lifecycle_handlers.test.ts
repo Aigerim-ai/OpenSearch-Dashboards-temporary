@@ -39,6 +39,7 @@ import { IRouter, RouteRegistrar } from '../router';
 
 import { configServiceMock } from '../../config/mocks';
 import { contextServiceMock } from '../../context/context_service.mock';
+import { dynamicConfigServiceMock } from '../../config/dynamic_config_service.mock';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pkg = require('../../../../../package.json');
@@ -53,6 +54,7 @@ const opensearchDashboardsName = 'my-opensearch-dashboards-name';
 const setupDeps = {
   context: contextServiceMock.createSetupContract(),
 };
+const dynamicConfigService = dynamicConfigServiceMock.createInternalStartContract();
 
 describe('core lifecycle handlers', () => {
   let server: HttpService;
@@ -99,7 +101,7 @@ describe('core lifecycle handlers', () => {
       router.get({ path: testRoute, validate: false }, (context, req, res) => {
         return res.ok({ body: 'ok' });
       });
-      await server.start();
+      await server.start({ dynamicConfigService });
     });
 
     it('accepts requests with the correct version passed in the version header', async () => {
@@ -132,7 +134,7 @@ describe('core lifecycle handlers', () => {
       router.get({ path: testErrorRoute, validate: false }, (context, req, res) => {
         return res.badRequest({ body: 'bad request' });
       });
-      await server.start();
+      await server.start({ dynamicConfigService });
     });
 
     it('adds the osd-name header', async () => {
@@ -203,7 +205,7 @@ describe('core lifecycle handlers', () => {
         );
       });
 
-      await server.start();
+      await server.start({ dynamicConfigService });
     });
 
     nonDestructiveMethods.forEach((method) => {
@@ -231,20 +233,23 @@ describe('core lifecycle handlers', () => {
             .expect(200, 'ok');
         });
 
+        // ToDo: Remove next; `osd-version` incorrectly used for satisfying XSRF protection
         it('accepts requests with the version header', async () => {
           await getSupertest(method.toLowerCase(), testPath)
             .set(versionHeader, actualVersion)
             .expect(200, 'ok');
         });
 
+        // ToDo: Rename next; `osd-version` incorrectly used for satisfying XSRF protection
         it('rejects requests without either an xsrf or version header', async () => {
           await getSupertest(method.toLowerCase(), testPath).expect(400, {
             statusCode: 400,
             error: 'Bad Request',
-            message: 'Request must contain a osd-xsrf header.',
+            message: 'Request must contain the osd-xsrf header.',
           });
         });
 
+        // ToDo: Rename next; `osd-version` incorrectly used for satisfying XSRF protection
         it('accepts whitelisted requests without either an xsrf or version header', async () => {
           await getSupertest(method.toLowerCase(), whitelistedTestPath).expect(200, 'ok');
         });

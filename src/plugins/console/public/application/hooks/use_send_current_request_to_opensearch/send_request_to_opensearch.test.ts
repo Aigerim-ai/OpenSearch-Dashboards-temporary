@@ -9,53 +9,14 @@
  * GitHub history for details.
  */
 
-import {
-  HttpFetchError,
-  HttpFetchOptionsWithPath,
-  HttpResponse,
-  HttpSetup,
-} from '../../../../../../core/public';
+import { HttpFetchError, HttpSetup } from '../../../../../../core/public';
 import { OpenSearchRequestArgs, sendRequestToOpenSearch } from './send_request_to_opensearch';
 import * as opensearch from '../../../lib/opensearch/opensearch';
+import {
+  createMockHttpResponse,
+  createMockResponse,
+} from '../../../lib/opensearch/http_response.mock';
 
-const createMockResponse = (
-  statusCode: number,
-  statusText: string,
-  headers: Array<[string, string]>
-): Response => {
-  return {
-    // headers: {} as Headers,
-    headers: new Headers(headers),
-    ok: true,
-    redirected: false,
-    status: statusCode,
-    statusText,
-    type: 'basic',
-    url: '',
-    clone: jest.fn(),
-    body: (jest.fn() as unknown) as ReadableStream,
-    bodyUsed: true,
-    arrayBuffer: jest.fn(),
-    blob: jest.fn(),
-    text: jest.fn(),
-    formData: jest.fn(),
-    json: jest.fn(),
-  };
-};
-
-const createMockHttpResponse = (
-  statusCode: number,
-  statusText: string,
-  headers: Array<[string, string]>,
-  body: any
-): HttpResponse<any> => {
-  return {
-    fetchOptions: (jest.fn() as unknown) as Readonly<HttpFetchOptionsWithPath>,
-    request: (jest.fn() as unknown) as Readonly<Request>,
-    response: createMockResponse(statusCode, statusText, headers),
-    body,
-  };
-};
 const dummyArgs: OpenSearchRequestArgs = {
   http: ({
     post: jest.fn(),
@@ -70,6 +31,10 @@ const dummyArgs: OpenSearchRequestArgs = {
 };
 
 describe('test sendRequestToOpenSearch', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('test request success, json', () => {
     const mockHttpResponse = createMockHttpResponse(
       200,
@@ -83,6 +48,72 @@ describe('test sendRequestToOpenSearch', () => {
     jest.spyOn(opensearch, 'send').mockResolvedValue(mockHttpResponse);
     sendRequestToOpenSearch(dummyArgs).then((result) => {
       expect((result as any)[0].response.value).toBe('{\n  "ok": true\n}');
+    });
+  });
+
+  it('test request success, json with long numerals when precision enabled', () => {
+    const longPositive = BigInt(Number.MAX_SAFE_INTEGER) * 2n + 1n;
+    const longNegative = BigInt(Number.MIN_SAFE_INTEGER) * 2n + 1n;
+    const mockHttpResponse = createMockHttpResponse(
+      200,
+      'ok',
+      [['Content-Type', 'application/json, utf-8']],
+      {
+        'long-max': longPositive,
+        'long-min': longNegative,
+      }
+    );
+
+    const send = jest.spyOn(opensearch, 'send');
+    send.mockResolvedValue(mockHttpResponse);
+    sendRequestToOpenSearch({
+      ...dummyArgs,
+      withLongNumeralsSupport: true,
+    }).then((result) => {
+      expect(send).toHaveBeenCalledWith(
+        expect.anything(),
+        dummyArgs.requests[0].method,
+        dummyArgs.requests[0].url,
+        dummyArgs.requests[0].data.join('\n') + '\n',
+        undefined,
+        true
+      );
+      const value = (result as any)[0].response.value;
+      expect(value).toMatch(new RegExp(`"long-max": ${longPositive}[,\n]`));
+      expect(value).toMatch(new RegExp(`"long-min": ${longNegative}[,\n]`));
+    });
+  });
+
+  it('test request success, json with long numerals when precision disabled', () => {
+    const longPositive = BigInt(Number.MAX_SAFE_INTEGER) * 2n + 1n;
+    const longNegative = BigInt(Number.MIN_SAFE_INTEGER) * 2n + 1n;
+    const mockHttpResponse = createMockHttpResponse(
+      200,
+      'ok',
+      [['Content-Type', 'application/json, utf-8']],
+      {
+        'long-max': Number(longPositive),
+        'long-min': Number(longNegative),
+      }
+    );
+
+    const send = jest.spyOn(opensearch, 'send');
+    send.mockResolvedValue(mockHttpResponse);
+    sendRequestToOpenSearch({
+      ...dummyArgs,
+      withLongNumeralsSupport: false,
+    }).then((result) => {
+      expect(send).toHaveBeenCalledWith(
+        expect.anything(),
+        dummyArgs.requests[0].method,
+        dummyArgs.requests[0].url,
+        dummyArgs.requests[0].data.join('\n') + '\n',
+        undefined,
+        false
+      );
+      const value = (result as any)[0].response.value;
+      expect(value).toMatch(new RegExp(`"long-max": ${Number(longPositive)}[,\n]`));
+      expect(value).toMatch(new RegExp(`"long-min": ${Number(longNegative)}[,\n]`));
     });
   });
 

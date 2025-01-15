@@ -8,56 +8,59 @@ exports[`Flyout conflicts should allow conflict resolution 1`] = `
   <EuiFlyoutHeader
     hasBorder={true}
   >
-    <EuiTitle
-      size="m"
+    <EuiText
+      size="s"
     >
       <h2>
         <FormattedMessage
-          defaultMessage="Import saved objects"
+          defaultMessage="Import {useUpdatedUX, select, true {assets} other {saved objects}}"
           id="savedObjectsManagement.objectsTable.flyout.importSavedObjectTitle"
-          values={Object {}}
+          values={
+            Object {
+              "useUpdatedUX": undefined,
+            }
+          }
         />
       </h2>
-    </EuiTitle>
+    </EuiText>
   </EuiFlyoutHeader>
   <EuiFlyoutBody>
-    <span>
-      <EuiSpacer
-        size="s"
-      />
-      <EuiCallOut
-        color="warning"
-        data-test-subj="importSavedObjectsConflictsWarning"
-        iconType="help"
-        title={
-          <FormattedMessage
-            defaultMessage="Index Pattern Conflicts"
-            id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsTitle"
-            values={Object {}}
-          />
-        }
-      >
-        <p>
-          <FormattedMessage
-            defaultMessage="The following saved objects use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
-            id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsDescription"
-            values={
-              Object {
-                "indexPatternLink": <EuiLink
-                  href=""
-                >
-                  <FormattedMessage
-                    defaultMessage="create a new index pattern"
-                    id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsCalloutLinkText"
-                    values={Object {}}
-                  />
-                </EuiLink>,
-              }
+    <EuiSpacer
+      size="s"
+    />
+    <EuiCallOut
+      color="warning"
+      data-test-subj="importSavedObjectsConflictsWarning"
+      iconType="help"
+      title={
+        <FormattedMessage
+          defaultMessage="Index Pattern Conflicts"
+          id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsTitle"
+          values={Object {}}
+        />
+      }
+    >
+      <p>
+        <FormattedMessage
+          defaultMessage="The following {useUpdatedUX, select, true {assets} other {saved objects}} use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
+          id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsDescription"
+          values={
+            Object {
+              "indexPatternLink": <EuiLink
+                href=""
+              >
+                <FormattedMessage
+                  defaultMessage="create a new index pattern"
+                  id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsCalloutLinkText"
+                  values={Object {}}
+                />
+              </EuiLink>,
+              "useUpdatedUX": undefined,
             }
-          />
-        </p>
-      </EuiCallOut>
-    </span>
+          }
+        />
+      </p>
+    </EuiCallOut>
     <EuiInMemoryTable
       columns={
         Array [
@@ -170,7 +173,9 @@ exports[`Flyout conflicts should allow conflict resolution 2`] = `
           },
           "basePath": BasePath {
             "basePath": "",
+            "clientBasePath": "",
             "get": [Function],
+            "getBasePath": [Function],
             "prepend": [Function],
             "remove": [Function],
             "serverBasePath": "",
@@ -186,6 +191,7 @@ exports[`Flyout conflicts should allow conflict resolution 2`] = `
           "post": [MockFunction],
           "put": [MockFunction],
         },
+        "selectedDataSourceId": undefined,
         "state": Object {
           "conflictedIndexPatterns": undefined,
           "conflictedSavedObjectsLinkedToSavedSearches": undefined,
@@ -216,7 +222,7 @@ exports[`Flyout conflicts should allow conflict resolution 2`] = `
           },
           "importCount": 0,
           "importMode": Object {
-            "createNewCopies": false,
+            "createNewCopies": true,
             "overwrite": true,
           },
           "indexPatterns": Array [
@@ -271,84 +277,85 @@ exports[`Flyout legacy conflicts should allow conflict resolution 1`] = `
   <EuiFlyoutHeader
     hasBorder={true}
   >
-    <EuiTitle
-      size="m"
+    <EuiText
+      size="s"
     >
       <h2>
         <FormattedMessage
-          defaultMessage="Import saved objects"
+          defaultMessage="Import {useUpdatedUX, select, true {assets} other {saved objects}}"
           id="savedObjectsManagement.objectsTable.flyout.importSavedObjectTitle"
-          values={Object {}}
+          values={
+            Object {
+              "useUpdatedUX": undefined,
+            }
+          }
         />
       </h2>
-    </EuiTitle>
+    </EuiText>
   </EuiFlyoutHeader>
   <EuiFlyoutBody>
-    <span>
-      <EuiSpacer
-        size="s"
-      />
-      <EuiCallOut
-        color="warning"
-        data-test-subj="importSavedObjectsLegacyWarning"
-        iconType="help"
-        title={
-          <FormattedMessage
-            defaultMessage="Support for JSON files is going away"
-            id="savedObjectsManagement.objectsTable.flyout.legacyFileUsedTitle"
-            values={Object {}}
-          />
-        }
-      >
-        <p>
-          <FormattedMessage
-            defaultMessage="Use our updated export to generate NDJSON files, and you'll be all set."
-            id="savedObjectsManagement.objectsTable.flyout.legacyFileUsedBody"
-            values={Object {}}
-          />
-        </p>
-      </EuiCallOut>
-      <EuiSpacer
-        size="m"
-      />
-    </span>
-    <span>
-      <EuiSpacer
-        size="s"
-      />
-      <EuiCallOut
-        color="warning"
-        data-test-subj="importSavedObjectsConflictsWarning"
-        iconType="help"
-        title={
-          <FormattedMessage
-            defaultMessage="Index Pattern Conflicts"
-            id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsTitle"
-            values={Object {}}
-          />
-        }
-      >
-        <p>
-          <FormattedMessage
-            defaultMessage="The following saved objects use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
-            id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsDescription"
-            values={
-              Object {
-                "indexPatternLink": <EuiLink
-                  href=""
-                >
-                  <FormattedMessage
-                    defaultMessage="create a new index pattern"
-                    id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsCalloutLinkText"
-                    values={Object {}}
-                  />
-                </EuiLink>,
-              }
+    <EuiSpacer
+      size="s"
+    />
+    <EuiCallOut
+      color="warning"
+      data-test-subj="importSavedObjectsLegacyWarning"
+      iconType="help"
+      title={
+        <FormattedMessage
+          defaultMessage="Support for JSON files is going away"
+          id="savedObjectsManagement.objectsTable.flyout.legacyFileUsedTitle"
+          values={Object {}}
+        />
+      }
+    >
+      <p>
+        <FormattedMessage
+          defaultMessage="Use our updated export to generate NDJSON files, and you'll be all set."
+          id="savedObjectsManagement.objectsTable.flyout.legacyFileUsedBody"
+          values={Object {}}
+        />
+      </p>
+    </EuiCallOut>
+    <EuiSpacer
+      size="m"
+    />
+    <EuiSpacer
+      size="s"
+    />
+    <EuiCallOut
+      color="warning"
+      data-test-subj="importSavedObjectsConflictsWarning"
+      iconType="help"
+      title={
+        <FormattedMessage
+          defaultMessage="Index Pattern Conflicts"
+          id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsTitle"
+          values={Object {}}
+        />
+      }
+    >
+      <p>
+        <FormattedMessage
+          defaultMessage="The following {useUpdatedUX, select, true {assets} other {saved objects}} use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
+          id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsDescription"
+          values={
+            Object {
+              "indexPatternLink": <EuiLink
+                href=""
+              >
+                <FormattedMessage
+                  defaultMessage="create a new index pattern"
+                  id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsCalloutLinkText"
+                  values={Object {}}
+                />
+              </EuiLink>,
+              "useUpdatedUX": undefined,
             }
-          />
-        </p>
-      </EuiCallOut>
-    </span>
+          }
+        />
+      </p>
+    </EuiCallOut>
     <EuiInMemoryTable
       columns={
         Array [
@@ -494,7 +501,7 @@ Array [
   >
     <p>
       <FormattedMessage
-        defaultMessage="The following saved objects use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
+        defaultMessage="The following {useUpdatedUX, select, true {assets} other {saved objects}} use index patterns that do not exist. Please select the index patterns you'd like re-associated with them. You can {indexPatternLink} if necessary."
         id="savedObjectsManagement.objectsTable.flyout.indexPatternConflictsDescription"
         values={
           Object {
@@ -507,6 +514,7 @@ Array [
                 values={Object {}}
               />
             </EuiLink>,
+            "useUpdatedUX": undefined,
           }
         }
       />
@@ -531,7 +539,7 @@ Array [
 ]
 `;
 
-exports[`Flyout should render import step 1`] = `
+exports[`Flyout should render cluster selector and import options when datasource is enabled 1`] = `
 <EuiFlyout
   onClose={[MockFunction]}
   size="s"
@@ -539,38 +547,42 @@ exports[`Flyout should render import step 1`] = `
   <EuiFlyoutHeader
     hasBorder={true}
   >
-    <EuiTitle
-      size="m"
+    <EuiText
+      size="s"
     >
       <h2>
         <FormattedMessage
-          defaultMessage="Import saved objects"
+          defaultMessage="Import {useUpdatedUX, select, true {assets} other {saved objects}}"
           id="savedObjectsManagement.objectsTable.flyout.importSavedObjectTitle"
-          values={Object {}}
+          values={
+            Object {
+              "useUpdatedUX": undefined,
+            }
+          }
         />
       </h2>
-    </EuiTitle>
+    </EuiText>
   </EuiFlyoutHeader>
   <EuiFlyoutBody>
     <EuiForm>
-      <EuiFormRow
+      <EuiCompressedFormRow
         describedByIds={Array []}
-        display="row"
+        display="rowCompressed"
         fullWidth={true}
         hasChildLabel={true}
         hasEmptyLabelSpace={false}
         label={
           <FormattedMessage
-            defaultMessage="Select a file to import"
+            defaultMessage="Select file"
             id="savedObjectsManagement.objectsTable.flyout.selectFileToImportFormRowLabel"
             values={Object {}}
           />
         }
         labelType="label"
       >
-        <EuiFilePicker
+        <EuiCompressedFilePicker
           accept=".ndjson, .json"
-          compressed={false}
+          compressed={true}
           display="large"
           fullWidth={true}
           initialPromptText={
@@ -582,26 +594,66 @@ exports[`Flyout should render import step 1`] = `
           }
           onChange={[Function]}
         />
-      </EuiFormRow>
-      <EuiFormRow
-        describedByIds={Array []}
-        display="row"
-        fullWidth={true}
-        hasChildLabel={true}
-        hasEmptyLabelSpace={false}
-        labelType="label"
+      </EuiCompressedFormRow>
+      <div
+        className="savedObjectImportControlForDataSource"
       >
-        <ImportModeControl
-          initialValues={
+        <EuiSpacer />
+        <EuiFormFieldset
+          legend={
             Object {
-              "createNewCopies": false,
-              "overwrite": true,
+              "children": <EuiTitle
+                size="xs"
+              >
+                <span>
+                  Import options
+                </span>
+              </EuiTitle>,
             }
           }
-          isLegacyFile={false}
-          updateSelection={[Function]}
-        />
-      </EuiFormRow>
+        >
+          <DataSourceSelector
+            compressed={true}
+            disabled={false}
+            fullWidth={true}
+            isClearable={false}
+            notifications={
+              Object {
+                "add": [MockFunction],
+                "addDanger": [MockFunction],
+                "addError": [MockFunction],
+                "addInfo": [MockFunction],
+                "addSuccess": [MockFunction],
+                "addWarning": [MockFunction],
+                "get$": [MockFunction],
+                "remove": [MockFunction],
+              }
+            }
+            onSelectedDataSource={[Function]}
+          />
+        </EuiFormFieldset>
+        <EuiSpacer />
+        <EuiCompressedFormRow
+          describedByIds={Array []}
+          display="rowCompressed"
+          fullWidth={true}
+          hasChildLabel={true}
+          hasEmptyLabelSpace={false}
+          labelType="label"
+        >
+          <ImportModeControl
+            initialValues={
+              Object {
+                "createNewCopies": true,
+                "overwrite": true,
+              }
+            }
+            isLegacyFile={false}
+            optionLabel="Conflict management"
+            updateSelection={[Function]}
+          />
+        </EuiCompressedFormRow>
+      </div>
     </EuiForm>
   </EuiFlyoutBody>
   <EuiFlyoutFooter>
@@ -629,6 +681,128 @@ exports[`Flyout should render import step 1`] = `
       >
         <EuiButton
           data-test-subj="importSavedObjectsImportBtn"
+          disabled={true}
+          fill={true}
+          isLoading={false}
+          onClick={[Function]}
+          size="s"
+        >
+          <FormattedMessage
+            defaultMessage="Import"
+            id="savedObjectsManagement.objectsTable.flyout.import.confirmButtonLabel"
+            values={Object {}}
+          />
+        </EuiButton>
+      </EuiFlexItem>
+    </EuiFlexGroup>
+  </EuiFlyoutFooter>
+</EuiFlyout>
+`;
+
+exports[`Flyout should render import step 1`] = `
+<EuiFlyout
+  onClose={[MockFunction]}
+  size="s"
+>
+  <EuiFlyoutHeader
+    hasBorder={true}
+  >
+    <EuiText
+      size="s"
+    >
+      <h2>
+        <FormattedMessage
+          defaultMessage="Import {useUpdatedUX, select, true {assets} other {saved objects}}"
+          id="savedObjectsManagement.objectsTable.flyout.importSavedObjectTitle"
+          values={
+            Object {
+              "useUpdatedUX": undefined,
+            }
+          }
+        />
+      </h2>
+    </EuiText>
+  </EuiFlyoutHeader>
+  <EuiFlyoutBody>
+    <EuiForm>
+      <EuiCompressedFormRow
+        describedByIds={Array []}
+        display="rowCompressed"
+        fullWidth={true}
+        hasChildLabel={true}
+        hasEmptyLabelSpace={false}
+        label={
+          <FormattedMessage
+            defaultMessage="Select file"
+            id="savedObjectsManagement.objectsTable.flyout.selectFileToImportFormRowLabel"
+            values={Object {}}
+          />
+        }
+        labelType="label"
+      >
+        <EuiCompressedFilePicker
+          accept=".ndjson, .json"
+          compressed={true}
+          display="large"
+          fullWidth={true}
+          initialPromptText={
+            <FormattedMessage
+              defaultMessage="Import"
+              id="savedObjectsManagement.objectsTable.flyout.importPromptText"
+              values={Object {}}
+            />
+          }
+          onChange={[Function]}
+        />
+      </EuiCompressedFormRow>
+      <EuiCompressedFormRow
+        describedByIds={Array []}
+        display="rowCompressed"
+        fullWidth={true}
+        hasChildLabel={true}
+        hasEmptyLabelSpace={false}
+        labelType="label"
+      >
+        <ImportModeControl
+          initialValues={
+            Object {
+              "createNewCopies": true,
+              "overwrite": true,
+            }
+          }
+          isLegacyFile={false}
+          optionLabel="Import options"
+          updateSelection={[Function]}
+        />
+      </EuiCompressedFormRow>
+    </EuiForm>
+  </EuiFlyoutBody>
+  <EuiFlyoutFooter>
+    <EuiFlexGroup
+      justifyContent="spaceBetween"
+    >
+      <EuiFlexItem
+        grow={false}
+      >
+        <EuiButtonEmpty
+          data-test-subj="importSavedObjectsCancelBtn"
+          disabled={false}
+          onClick={[MockFunction]}
+          size="s"
+        >
+          <FormattedMessage
+            defaultMessage="Cancel"
+            id="savedObjectsManagement.objectsTable.flyout.import.cancelButtonLabel"
+            values={Object {}}
+          />
+        </EuiButtonEmpty>
+      </EuiFlexItem>
+      <EuiFlexItem
+        grow={false}
+      >
+        <EuiButton
+          data-test-subj="importSavedObjectsImportBtn"
+          disabled={false}
           fill={true}
           isLoading={false}
           onClick={[Function]}

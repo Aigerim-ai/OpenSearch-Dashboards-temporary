@@ -34,7 +34,8 @@ import { __osdBootstrap__ } from './';
 describe('osd_bootstrap', () => {
   beforeAll(() => {
     const metadata = {
-      i18n: { translationsUrl: 'http://localhost' },
+      branding: { darkMode: 'true' },
+      i18n: { translationsUrl: 'http://localhost/translations/en.json' },
       vars: { apmConfig: null },
     };
     // eslint-disable-next-line no-unsanitized/property

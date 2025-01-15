@@ -1,99 +1,61 @@
-.dscSidebar__container {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  background-color: transparent;
-  border-right-color: transparent;
-  border-bottom-color: transparent;
-}
+/*
+ * Copyright OpenSearch Contributors
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
-.dscIndexPattern__container {
-  display: flex;
-  align-items: center;
-  height: $euiSize * 3;
-  margin-top: -$euiSizeS;
-}
+.deSidebar_panel {
+  .dscSideBar_searchContainer {
+    border-bottom: $euiBorderThin;
 
-.dscIndexPattern__triggerButton {
-  @include euiTitle("xs");
+    .toggleFieldFilterButton {
+      border: none;
+      background-color: $euiFormInputGroupLabelBackground;
+    }
 
-  line-height: $euiSizeXXL;
-}
+    .dscSideBar_searchInput {
+      box-shadow: none;
+      border: $euiBorderThin;
+      background-color: $euiFormBackgroundColor;
+    }
+  }
 
-.dscFieldList {
-  list-style: none;
-  margin-bottom: 0;
-}
+  .dscSideBar_fieldListContainer {
+    padding-top: $euiSizeS;
+  }
 
-.dscFieldListHeader {
-  padding: $euiSizeS $euiSizeS 0 $euiSizeS;
-  background-color: lightOrDarkTheme(tint($euiColorPrimary, 90%), $euiColorLightShade);
-}
+  .deSidebar_dataSource {
+    padding-bottom: 0;
+  }
 
-.dscFieldList--popular {
-  background-color: lightOrDarkTheme(tint($euiColorPrimary, 90%), $euiColorLightShade);
-}
+  .datasetSelector__button {
+    border-radius: $euiFormControlCompressedBorderRadius;
+    border-color: $euiFormBorderColor;
+    background-color: $euiFormBackgroundColor;
 
-.dscFieldChooser {
-  padding-left: $euiSize;
-}
+    & > .euiButtonContent {
+      justify-content: space-between;
 
-.dscFieldChooser__toggle {
-  color: $euiColorMediumShade;
-  margin-left: $euiSizeS !important;
-}
-
-.dscSidebarItem {
-  &:hover,
-  &:focus-within,
-  &[class*="-isActive"] {
-    .dscSidebarItem__action {
-      opacity: 1;
+      .euiIcon {
+        fill: $euiTextSubduedColor;
+      }
     }
   }
 }
 
-/**
- * 1. Only visually hide the action, so that it's still accessible to screen readers.
- * 2. When tabbed to, this element needs to be visible for keyboard accessibility.
- */
-.dscSidebarItem__action {
-  opacity: 0; /* 1 */
-  transition: none;
+.dscSideBar_fieldGroup {
+  width: 100%;
 
-  &:focus {
-    opacity: 1; /* 2 */
-  }
-
-  font-size: $euiFontSizeXS;
-  padding: 2px 6px !important;
-  height: 22px !important;
-  min-width: auto !important;
-
-  .euiButton__content {
-    padding: 0 4px;
+  .euiButtonEmpty__content {
+    font-size: $euiFontSizeXS;
+    font-weight: $euiFontWeightSemiBold;
+    justify-content: flex-start;
+    padding-left: $euiSizeM + 2px;
   }
 }
 
-.dscFieldSearch {
-  padding: $euiSizeS;
-}
-
-.dscFieldSearch__toggleButton {
-  width: calc(100% - #{$euiSizeS});
-  color: $euiColorPrimary;
+.dscSidebar__item:hover,
+.dscSidebar__item:focus {
+  background-color: $euiColorLightestShade;
   padding-left: $euiSizeXS;
-  margin-left: $euiSizeXS;
-}
-
-.dscFieldSearch__filterWrapper {
-  flex-grow: 0;
-}
-
-.dscFieldSearch__formWrapper {
-  padding: $euiSizeM;
-}
-
-.dscFieldDetails {
-  color: $euiTextColor;
-  margin-bottom: $euiSizeS;
+  margin-left: -$euiSizeXS;
 }

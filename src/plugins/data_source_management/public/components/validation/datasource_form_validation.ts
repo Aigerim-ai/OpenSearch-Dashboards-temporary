@@ -4,10 +4,11 @@
  */
 
 import { i18n } from '@osd/i18n';
-import { isValidUrl } from '../utils';
+import { extractRegisteredAuthTypeCredentials, isValidUrl } from '../utils';
 import { CreateDataSourceState } from '../create_data_source_wizard/components/create_form/create_data_source_form';
 import { EditDataSourceState } from '../edit_data_source/components/edit_form/edit_data_source_form';
 import { AuthType } from '../../types';
+import { AuthenticationMethodRegistry } from '../../auth_registry';
 
 export interface CreateEditDataSourceValidation {
   title: string[];
@@ -20,6 +21,7 @@ export interface CreateEditDataSourceValidation {
     region: string[];
     accessKey: string[];
     secretKey: string[];
+    service: string[];
   };
 }
 
@@ -34,6 +36,7 @@ export const defaultValidation: CreateEditDataSourceValidation = {
     region: [],
     accessKey: [],
     secretKey: [],
+    service: [],
   },
 };
 
@@ -47,8 +50,14 @@ export const isTitleValid = (
     error: '',
   };
   /* Title validation */
-  if (!title?.trim?.().length) {
+  if (!title.trim().length) {
     isValid.valid = false;
+  } else if (title.length > 32) {
+    /* title length validation */
+    isValid.valid = false;
+    isValid.error = i18n.translate('dataSourcesManagement.validation.titleLength', {
+      defaultMessage: 'Title must be no longer than 32 characters',
+    });
   } else if (
     title.toLowerCase() !== existingTitle.toLowerCase() &&
     Array.isArray(existingDatasourceNamesList) &&
@@ -66,7 +75,8 @@ export const isTitleValid = (
 export const performDataSourceFormValidation = (
   formValues: CreateDataSourceState | EditDataSourceState,
   existingDatasourceNamesList: string[],
-  existingTitle: string
+  existingTitle: string,
+  authenticationMethodRegistry: AuthenticationMethodRegistry
 ) => {
   /* Title validation */
   const titleValid = isTitleValid(formValues?.title, existingDatasourceNamesList, existingTitle);
@@ -82,8 +92,9 @@ export const performDataSourceFormValidation = (
 
   /* Credential Validation */
 
-  /* Username & Password */
-  if (formValues?.auth?.type === AuthType.UsernamePasswordType) {
+  if (formValues?.auth?.type === AuthType.NoAuth) {
+    return true;
+  } else if (formValues?.auth?.type === AuthType.UsernamePasswordType) {
     /* Username */
     if (!formValues.auth.credentials?.username) {
       return false;
@@ -93,9 +104,7 @@ export const performDataSourceFormValidation = (
     if (!formValues.auth.credentials?.password) {
       return false;
     }
-  }
-  /* AWS SigV4 Content */
-  if (formValues?.auth?.type === AuthType.SigV4) {
+  } else if (formValues?.auth?.type === AuthType.SigV4) {
     /* Access key */
     if (!formValues.auth.credentials?.accessKey) {
       return false;
@@ -109,6 +118,23 @@ export const performDataSourceFormValidation = (
     /* Region */
     if (!formValues.auth.credentials?.region) {
       return false;
+    }
+
+    /* Service Name */
+    if (!formValues.auth.credentials?.service) {
+      return false;
+    }
+  } else {
+    const registeredCredentials = extractRegisteredAuthTypeCredentials(
+      (formValues?.auth?.credentials ?? {}) as { [key: string]: string },
+      formValues?.auth?.type ?? '',
+      authenticationMethodRegistry
+    );
+
+    for (const credentialValue of Object.values(registeredCredentials)) {
+      if (credentialValue.trim().length === 0) {
+        return false;
+      }
     }
   }
 

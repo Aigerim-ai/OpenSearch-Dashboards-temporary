@@ -29,7 +29,7 @@
  */
 
 import { Readable } from 'stream';
-import { SavedObjectsClientContract, SavedObject } from '../types';
+import { SavedObjectsClientContract, SavedObject, SavedObjectsBaseOptions } from '../types';
 import { ISavedObjectTypeRegistry } from '..';
 
 /**
@@ -106,6 +106,15 @@ export interface SavedObjectsImportMissingReferencesError {
 }
 
 /**
+ * Represents an error that occurs when an import fails due to a missing data source in the target workspace.
+ * @public
+ */
+export interface SavedObjectsImportMissingDataSourceError {
+  type: 'missing_data_source';
+  dataSource: string;
+}
+
+/**
  * Represents a failure to import.
  * @public
  */
@@ -126,7 +135,8 @@ export interface SavedObjectsImportError {
     | SavedObjectsImportAmbiguousConflictError
     | SavedObjectsImportUnsupportedTypeError
     | SavedObjectsImportMissingReferencesError
-    | SavedObjectsImportUnknownError;
+    | SavedObjectsImportUnknownError
+    | SavedObjectsImportMissingDataSourceError;
 }
 
 /**
@@ -187,6 +197,11 @@ export interface SavedObjectsImportOptions {
   namespace?: string;
   /** If true, will create new copies of import objects, each with a random `id` and undefined `originId`. */
   createNewCopies: boolean;
+  dataSourceId?: string;
+  dataSourceTitle?: string;
+  dataSourceEnabled?: boolean;
+  workspaces?: SavedObjectsBaseOptions['workspaces'];
+  isCopy?: boolean;
 }
 
 /**
@@ -208,6 +223,12 @@ export interface SavedObjectsResolveImportErrorsOptions {
   namespace?: string;
   /** If true, will create new copies of import objects, each with a random `id` and undefined `originId`. */
   createNewCopies: boolean;
+  dataSourceId?: string;
+  dataSourceTitle?: string;
+  /** if specified, will import in given workspaces */
+  workspaces?: SavedObjectsBaseOptions['workspaces'];
 }
 
 export type CreatedObject<T> = SavedObject<T> & { destinationId?: string };
+
+export type VisualizationObject<T = any> = SavedObject<T> & { attributes: { visState: string } };

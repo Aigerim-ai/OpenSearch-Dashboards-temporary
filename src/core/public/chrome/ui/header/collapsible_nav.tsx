@@ -50,7 +50,8 @@ import { InternalApplicationStart } from '../../../application/types';
 import { HttpStart } from '../../../http';
 import { OnIsLockedUpdate } from './';
 import { createEuiListItem, createRecentNavLink, isModifiedOrPrevented } from './nav_link';
-import { ChromeBranding } from '../../chrome_service';
+import type { Logos } from '../../../../common/types';
+import { getIsCategoryOpen, setIsCategoryOpen } from '../../utils';
 
 function getAllCategories(allCategorizedLinks: Record<string, ChromeNavLink[]>) {
   const allCategories = {} as Record<string, AppCategory | undefined>;
@@ -72,23 +73,10 @@ function getOrderedCategories(
   );
 }
 
-function getCategoryLocalStorageKey(id: string) {
-  return `core.navGroup.${id}`;
-}
-
-function getIsCategoryOpen(id: string, storage: Storage) {
-  const value = storage.getItem(getCategoryLocalStorageKey(id)) ?? 'true';
-
-  return value === 'true';
-}
-
-function setIsCategoryOpen(id: string, isOpen: boolean, storage: Storage) {
-  storage.setItem(getCategoryLocalStorageKey(id), `${isOpen}`);
-}
-
 interface Props {
   appId$: InternalApplicationStart['currentAppId$'];
   basePath: HttpStart['basePath'];
+  collapsibleNavHeaderRender?: () => JSX.Element | null;
   id: string;
   isLocked: boolean;
   isNavOpen: boolean;
@@ -101,11 +89,13 @@ interface Props {
   navigateToApp: InternalApplicationStart['navigateToApp'];
   navigateToUrl: InternalApplicationStart['navigateToUrl'];
   customNavLink$: Rx.Observable<ChromeNavLink | undefined>;
-  branding: ChromeBranding;
+  logos: Logos;
+  workspaceEnabled: boolean | undefined;
 }
 
 export function CollapsibleNav({
   basePath,
+  collapsibleNavHeaderRender,
   id,
   isLocked,
   isNavOpen,
@@ -115,7 +105,8 @@ export function CollapsibleNav({
   closeNav,
   navigateToApp,
   navigateToUrl,
-  branding,
+  logos,
+  workspaceEnabled,
   ...observables
 }: Props) {
   const navLinks = useObservable(observables.navLinks$, []).filter((link) => !link.hidden);
@@ -138,42 +129,6 @@ export function CollapsibleNav({
     });
   };
 
-  const DEFAULT_OPENSEARCH_MARK = `${branding.assetFolderUrl}/opensearch_mark_default_mode.svg`;
-  const DARKMODE_OPENSEARCH_MARK = `${branding.assetFolderUrl}/opensearch_mark_dark_mode.svg`;
-
-  const darkMode = branding.darkMode;
-  const markDefault = branding.mark?.defaultUrl;
-  const markDarkMode = branding.mark?.darkModeUrl;
-
-  /**
-   * Use branding configurations to check which URL to use for rendering
-   * side menu opensearch logo in default mode
-   *
-   * @returns a valid custom URL or original default mode opensearch mark if no valid URL is provided
-   */
-  const customSideMenuLogoDefaultMode = () => {
-    return markDefault ?? DEFAULT_OPENSEARCH_MARK;
-  };
-
-  /**
-   * Use branding configurations to check which URL to use for rendering
-   * side menu opensearch logo in dark mode
-   *
-   * @returns a valid custom URL or original dark mode opensearch mark if no valid URL is provided
-   */
-  const customSideMenuLogoDarkMode = () => {
-    return markDarkMode ?? markDefault ?? DARKMODE_OPENSEARCH_MARK;
-  };
-
-  /**
-   * Render custom side menu logo for both default mode and dark mode
-   *
-   * @returns a valid logo URL
-   */
-  const customSideMenuLogo = () => {
-    return darkMode ? customSideMenuLogoDarkMode() : customSideMenuLogoDefaultMode();
-  };
-
   return (
     <EuiCollapsibleNav
       data-test-subj="collapsibleNav"
@@ -186,6 +141,7 @@ export function CollapsibleNav({
       onClose={closeNav}
       outsideClickCloses={false}
     >
+      {collapsibleNavHeaderRender && collapsibleNavHeaderRender()}
       {customNavLink && (
         <Fragment>
           <EuiFlexItem grow={false} style={{ flexShrink: 0 }}>
@@ -239,7 +195,8 @@ export function CollapsibleNav({
                 link,
                 navLinks,
                 basePath,
-                navigateToUrl
+                navigateToUrl,
+                !!workspaceEnabled
               );
 
               return {
@@ -277,7 +234,7 @@ export function CollapsibleNav({
         {orderedCategories.map((categoryName) => {
           const category = categoryDictionary[categoryName]!;
           const opensearchLinkLogo =
-            category.id === 'opensearchDashboards' ? customSideMenuLogo() : category.euiIconType;
+            category.id === 'opensearchDashboards' ? logos.Mark.url : category.euiIconType;
 
           return (
             <EuiCollapsibleNavGroup
@@ -315,7 +272,7 @@ export function CollapsibleNav({
         ))}
 
         {/* Docking button only for larger screens that can support it*/}
-        <EuiShowFor sizes={['l', 'xl']}>
+        <EuiShowFor sizes={['l', 'xl', 'xxl', 'xxxl']}>
           <EuiCollapsibleNavGroup>
             <EuiListGroup flush>
               <EuiListGroupItem

@@ -50,7 +50,6 @@ import './index.scss';
 
 import {
   ChromeBadge,
-  ChromeBrand,
   ChromeBreadcrumb,
   ChromeHelpExtension,
   ChromeHelpExtensionMenuLink,
@@ -64,10 +63,24 @@ import {
   ChromeNavLinks,
   ChromeNavLinkUpdateableFields,
   ChromeDocTitle,
+  ChromeSetup,
   ChromeStart,
   ChromeRecentlyAccessed,
   ChromeRecentlyAccessedHistoryItem,
   NavType,
+  RightNavigationOrder,
+  RightNavigationButton,
+  RightNavigationButtonProps,
+  ChromeRegistrationNavLink,
+  ChromeNavGroupUpdater,
+  PersistedLog,
+  NavGroupItemInMap,
+  fulfillRegistrationLinksToChromeNavLinks,
+  createRecentNavLink,
+  HeaderVariant,
+  LinkItemType,
+  getSortedNavLinks,
+  SearchCommandKeyTypes,
 } from './chrome';
 import { FatalErrorsSetup, FatalErrorsStart, FatalErrorInfo } from './fatal_errors';
 import { HttpSetup, HttpStart } from './http';
@@ -88,11 +101,23 @@ import {
   HandlerParameters,
 } from './context';
 import { Branding } from '../types';
+import { WorkspacesStart, WorkspacesSetup } from './workspace';
 
+export type { Logos } from '../common';
 export { PackageInfo, EnvironmentMode } from '../server/types';
 /** @interal */
 export { CoreContext, CoreSystem } from './core_system';
-export { DEFAULT_APP_CATEGORIES } from '../utils';
+export {
+  DEFAULT_APP_CATEGORIES,
+  WORKSPACE_TYPE,
+  cleanWorkspaceId,
+  DEFAULT_NAV_GROUPS,
+  ALL_USE_CASE_ID,
+  SEARCH_USE_CASE_ID,
+  ESSENTIAL_USE_CASE_ID,
+  OBSERVABILITY_USE_CASE_ID,
+  SECURITY_ANALYTICS_USE_CASE_ID,
+} from '../utils';
 export {
   AppCategory,
   UiSettingsParams,
@@ -102,6 +127,15 @@ export {
   StringValidation,
   StringValidationRegex,
   StringValidationRegexString,
+  WorkspaceAttribute,
+  ChromeNavGroup,
+  NavGroupType,
+  NavGroupStatus,
+  WorkspaceAttributeWithPermission,
+  UiSettingScope,
+  PermissionModeId,
+  WorkspacePermissionMode,
+  WorkspaceFindOptions,
 } from '../types';
 
 export {
@@ -125,6 +159,7 @@ export {
   AppUpdater,
   ScopedHistory,
   NavigateToAppOptions,
+  WorkspaceAvailability,
 } from './application';
 
 export {
@@ -179,7 +214,13 @@ export {
   IHttpResponseInterceptorOverrides,
 } from './http';
 
-export { OverlayStart, OverlayBannersStart, OverlayRef } from './overlays';
+export {
+  OverlayStart,
+  OverlayBannersStart,
+  OverlayRef,
+  ISidecarConfig,
+  SIDECAR_DOCKED_MODE,
+} from './overlays';
 
 export {
   Toast,
@@ -193,7 +234,7 @@ export {
   ErrorToastOptions,
 } from './notifications';
 
-export { MountPoint, UnmountCallback, PublicUiSettingsParams } from './types';
+export { MountPoint, UnmountCallback, PublicUiSettingsParams, ChromeBrand } from './types';
 
 export { URL_MAX_LENGTH } from './core_app';
 
@@ -219,6 +260,8 @@ export interface CoreSetup<TPluginsStart extends object = object, TStart = unkno
    * @deprecated
    */
   context: ContextSetup;
+  /** {@link ChromeSetup} */
+  chrome: ChromeSetup;
   /** {@link FatalErrorsSetup} */
   fatalErrors: FatalErrorsSetup;
   /** {@link HttpSetup} */
@@ -239,6 +282,8 @@ export interface CoreSetup<TPluginsStart extends object = object, TStart = unkno
   };
   /** {@link StartServicesAccessor} */
   getStartServices: StartServicesAccessor<TPluginsStart, TStart>;
+  /** {@link WorkspacesSetup} */
+  workspaces: WorkspacesSetup;
 }
 
 /**
@@ -293,12 +338,13 @@ export interface CoreStart {
     getInjectedVar: (name: string, defaultValue?: any) => unknown;
     getBranding: () => Branding;
   };
+  /** {@link WorkspacesStart} */
+  workspaces: WorkspacesStart;
 }
 
 export {
   Capabilities,
   ChromeBadge,
-  ChromeBrand,
   ChromeBreadcrumb,
   ChromeHelpExtension,
   ChromeHelpExtensionMenuLink,
@@ -339,6 +385,30 @@ export {
   UiSettingsState,
   NavType,
   Branding,
+  RightNavigationOrder,
+  RightNavigationButton,
+  RightNavigationButtonProps,
+  ChromeRegistrationNavLink,
+  ChromeNavGroupUpdater,
+  PersistedLog,
+  NavGroupItemInMap,
+  fulfillRegistrationLinksToChromeNavLinks,
+  createRecentNavLink,
+  HeaderVariant,
+  LinkItemType,
+  getSortedNavLinks,
+  SearchCommandKeyTypes,
 };
 
 export { __osdBootstrap__ } from './osd_bootstrap';
+
+export {
+  WorkspacesStart,
+  WorkspacesSetup,
+  WorkspacesService,
+  WorkspaceObject,
+  IWorkspaceClient,
+  IWorkspaceResponse,
+} from './workspace';
+
+export { debounce } from './utils';

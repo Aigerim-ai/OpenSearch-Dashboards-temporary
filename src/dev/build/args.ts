@@ -52,6 +52,7 @@ export function readCliArgs(argv: string[]) {
       'all-platforms',
       'windows',
       'darwin',
+      'darwin-arm',
       'linux',
       'linux-arm',
       'verbose',
@@ -59,6 +60,7 @@ export function readCliArgs(argv: string[]) {
       'silent',
       'debug',
       'help',
+      'with-translations',
     ],
     alias: {
       v: 'verbose',
@@ -133,10 +135,12 @@ export function readCliArgs(argv: string[]) {
     targetPlatforms: {
       windows: Boolean(flags.windows),
       darwin: Boolean(flags.darwin),
+      darwinArm: Boolean(flags['darwin-arm']),
       linux: Boolean(flags.linux),
       linuxArm: Boolean(flags['linux-arm']),
     },
     targetAllPlatforms: Boolean(flags['all-platforms']),
+    withTranslations: Boolean(flags['with-translations']),
   };
 
   return {

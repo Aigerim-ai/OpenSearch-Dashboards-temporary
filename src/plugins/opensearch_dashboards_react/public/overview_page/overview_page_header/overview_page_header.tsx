@@ -30,15 +30,15 @@
 
 import React, { FC } from 'react';
 import {
-  EuiButtonEmpty,
+  EuiSmallButtonEmpty,
   EuiFlexGroup,
   EuiFlexItem,
   EuiIcon,
-  EuiTitle,
+  EuiText,
   IconType,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
-import { CoreStart } from 'opensearch-dashboards/public';
+import { CoreStart, Logos } from 'opensearch-dashboards/public';
 import { RedirectAppLinks } from '../../app_links';
 import { useOpenSearchDashboards } from '../../context';
 import { ReactPluginBranding } from '../..';
@@ -47,24 +47,28 @@ import './index.scss';
 
 interface Props {
   hideToolbar?: boolean;
+  /** @deprecated use showIcon */
   iconType?: IconType;
+  showIcon?: boolean;
   overlap?: boolean;
   showDevToolsLink?: boolean;
   showManagementLink?: boolean;
   title: JSX.Element | string;
   addBasePath: (path: string) => string;
-  branding: ReactPluginBranding;
+  logos: Logos;
+  /** @deprecated use logos */
+  branding?: ReactPluginBranding;
 }
 
 export const OverviewPageHeader: FC<Props> = ({
   hideToolbar,
-  iconType,
+  showIcon = false,
   overlap,
   showDevToolsLink,
   showManagementLink,
   title,
   addBasePath,
-  branding,
+  logos,
 }) => {
   const {
     services: { application },
@@ -74,58 +78,6 @@ export const OverviewPageHeader: FC<Props> = ({
     management: isManagementEnabled,
     dev_tools: isDevToolsEnabled,
   } = application.capabilities.navLinks;
-
-  const DEFAULT_OPENSEARCH_MARK = `${branding.assetFolderUrl}/opensearch_mark_default_mode.svg`;
-  const DARKMODE_OPENSEARCH_MARK = `${branding.assetFolderUrl}/opensearch_mark_dark_mode.svg`;
-
-  const darkMode = branding.darkMode;
-  const markDefault = branding.mark?.defaultUrl;
-  const markDarkMode = branding.mark?.darkModeUrl;
-
-  /**
-   * Use branding configurations to check which URL to use for rendering
-   * overview logo in default mode. In default mode, overview logo will
-   * proritize default mode mark URL. If it is invalid, default opensearch logo
-   * will be rendered.
-   *
-   * @returns a valid custom URL or undefined if no valid URL is provided
-   */
-  const customOverviewLogoDefaultMode = () => {
-    return markDefault ?? DEFAULT_OPENSEARCH_MARK;
-  };
-
-  /**
-   * Use branding configurations to check which URL to use for rendering
-   * overview logo in dark mode. In dark mode, overview logo will render
-   * dark mode mark URL if valid. Otherwise, it will render the default
-   * mode mark URL if valid. If both dark mode mark URL and default mode mark
-   * URL are invalid, the default opensearch logo will be rendered.
-   *
-   * @returns a valid custom URL or undefined if no valid URL is provided
-   */
-  const customOverviewLogoDarkMode = () => {
-    return markDarkMode ?? markDefault ?? DARKMODE_OPENSEARCH_MARK;
-  };
-
-  /**
-   * Render custom overview logo for both default mode and dark mode
-   *
-   * @returns a valid custom loading logo URL, or undefined
-   */
-  const customOverviewLogo = () => {
-    return darkMode ? customOverviewLogoDarkMode() : customOverviewLogoDefaultMode();
-  };
-
-  /**
-   * Check if we render a custom overview logo or the default opensearch spinner.
-   * If customOverviewLogo() returns undefined(no valid custom URL is found), we
-   * render the default opensearch logo
-   *
-   * @returns a image component with custom logo URL, or the default opensearch logo
-   */
-  const renderBrandingEnabledOrDisabledLogo = (iconTypeInput?: IconType) => {
-    return customOverviewLogo() ?? iconTypeInput ?? '';
-  };
 
   return (
     <header
@@ -137,21 +89,21 @@ export const OverviewPageHeader: FC<Props> = ({
         <EuiFlexGroup>
           <EuiFlexItem>
             <EuiFlexGroup gutterSize="m" responsive={false}>
-              {iconType && (
+              {showIcon && (
                 <EuiFlexItem grow={false}>
                   <EuiIcon
                     size="xxl"
-                    type={renderBrandingEnabledOrDisabledLogo(iconType)}
+                    type={logos.Mark.url}
                     data-test-subj={`osdOverviewPageHeaderLogo`}
-                    data-test-logo={renderBrandingEnabledOrDisabledLogo(iconType)}
+                    data-test-logo={logos.Mark.url}
                   />
                 </EuiFlexItem>
               )}
 
               <EuiFlexItem>
-                <EuiTitle size="m">
+                <EuiText size="s">
                   <h1 id="osdOverviewPageHeader__title">{title}</h1>
-                </EuiTitle>
+                </EuiText>
               </EuiFlexItem>
             </EuiFlexGroup>
           </EuiFlexItem>
@@ -161,7 +113,7 @@ export const OverviewPageHeader: FC<Props> = ({
               <EuiFlexGroup className="osdOverviewPageHeader__actions" responsive={false} wrap>
                 <EuiFlexItem className="osdOverviewPageHeader__actionItem" grow={false}>
                   <RedirectAppLinks application={application}>
-                    <EuiButtonEmpty
+                    <EuiSmallButtonEmpty
                       className="osdOverviewPageHeader__actionButton"
                       flush="both"
                       href={addBasePath('/app/home#/tutorial_directory')}
@@ -173,14 +125,14 @@ export const OverviewPageHeader: FC<Props> = ({
                           defaultMessage: 'Add data',
                         }
                       )}
-                    </EuiButtonEmpty>
+                    </EuiSmallButtonEmpty>
                   </RedirectAppLinks>
                 </EuiFlexItem>
 
                 {showManagementLink && isManagementEnabled ? (
                   <EuiFlexItem className="osdOverviewPageHeader__actionItem" grow={false}>
                     <RedirectAppLinks application={application}>
-                      <EuiButtonEmpty
+                      <EuiSmallButtonEmpty
                         className="osdOverviewPageHeader__actionButton"
                         flush="both"
                         iconType="gear"
@@ -192,7 +144,7 @@ export const OverviewPageHeader: FC<Props> = ({
                             defaultMessage: 'Manage',
                           }
                         )}
-                      </EuiButtonEmpty>
+                      </EuiSmallButtonEmpty>
                     </RedirectAppLinks>
                   </EuiFlexItem>
                 ) : null}
@@ -200,7 +152,7 @@ export const OverviewPageHeader: FC<Props> = ({
                 {showDevToolsLink && isDevToolsEnabled ? (
                   <EuiFlexItem className="osdOverviewPageHeader__actionItem" grow={false}>
                     <RedirectAppLinks application={application}>
-                      <EuiButtonEmpty
+                      <EuiSmallButtonEmpty
                         className="osdOverviewPageHeader__actionButton"
                         flush="both"
                         iconType="wrench"
@@ -212,7 +164,7 @@ export const OverviewPageHeader: FC<Props> = ({
                             defaultMessage: 'Dev tools',
                           }
                         )}
-                      </EuiButtonEmpty>
+                      </EuiSmallButtonEmpty>
                     </RedirectAppLinks>
                   </EuiFlexItem>
                 ) : null}

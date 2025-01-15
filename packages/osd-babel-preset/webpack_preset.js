@@ -28,6 +28,10 @@
  * under the License.
  */
 
+const { resolve } = require('path');
+const browserlist = require('browserslist');
+const targets = browserlist.loadConfig({ path: resolve(__dirname, '../..') });
+
 module.exports = () => {
   return {
     presets: [
@@ -36,6 +40,7 @@ module.exports = () => {
         {
           useBuiltIns: 'entry',
           modules: false,
+          targets,
           // Please read the explanation for this
           // in node_preset.js
           corejs: '3.2.1',
@@ -46,6 +51,12 @@ module.exports = () => {
     plugins: [
       [
         require.resolve('babel-plugin-styled-components'),
+        {
+          fileName: false,
+        },
+      ],
+      [
+        require.resolve('@babel/plugin-transform-class-static-block'),
         {
           fileName: false,
         },

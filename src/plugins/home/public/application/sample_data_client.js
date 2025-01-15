@@ -36,26 +36,45 @@ function clearIndexPatternsCache() {
   getServices().indexPatternService.clearCache();
 }
 
-export async function listSampleDataSets() {
-  return await getServices().http.get(sampleDataUrl);
+export async function listSampleDataSets(dataSourceId) {
+  const query = buildQuery(dataSourceId);
+  return await getServices().http.get(sampleDataUrl, { query });
 }
 
-export async function installSampleDataSet(id, sampleDataDefaultIndex) {
-  await getServices().http.post(`${sampleDataUrl}/${id}`);
+const canUpdateUISetting = () => {
+  const {
+    application: { capabilities },
+    workspaces,
+  } = getServices();
+  if (
+    capabilities.workspaces &&
+    capabilities.workspaces.enabled &&
+    capabilities.workspaces.permissionEnabled
+  ) {
+    return !!workspaces?.currentWorkspace$.getValue()?.owner;
+  }
+  return true;
+};
 
-  if (getServices().uiSettings.isDefault('defaultIndex')) {
+export async function installSampleDataSet(id, sampleDataDefaultIndex, dataSourceId) {
+  const query = buildQuery(dataSourceId);
+  await getServices().http.post(`${sampleDataUrl}/${id}`, { query });
+
+  if (canUpdateUISetting() && getServices().uiSettings.isDefault('defaultIndex')) {
     getServices().uiSettings.set('defaultIndex', sampleDataDefaultIndex);
   }
 
   clearIndexPatternsCache();
 }
 
-export async function uninstallSampleDataSet(id, sampleDataDefaultIndex) {
-  await getServices().http.delete(`${sampleDataUrl}/${id}`);
+export async function uninstallSampleDataSet(id, sampleDataDefaultIndex, dataSourceId) {
+  const query = buildQuery(dataSourceId);
+  await getServices().http.delete(`${sampleDataUrl}/${id}`, { query });
 
   const uiSettings = getServices().uiSettings;
 
   if (
+    canUpdateUISetting() &&
     !uiSettings.isDefault('defaultIndex') &&
     uiSettings.get('defaultIndex') === sampleDataDefaultIndex
   ) {
@@ -63,4 +82,14 @@ export async function uninstallSampleDataSet(id, sampleDataDefaultIndex) {
   }
 
   clearIndexPatternsCache();
+}
+
+function buildQuery(dataSourceId) {
+  const query = {};
+
+  if (dataSourceId) {
+    query.data_source_id = dataSourceId;
+  }
+
+  return query;
 }

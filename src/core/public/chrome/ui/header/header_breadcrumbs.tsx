@@ -28,29 +28,51 @@
  * under the License.
  */
 
-import { EuiHeaderBreadcrumbs } from '@elastic/eui';
+import { EuiHeaderBreadcrumbs, EuiSimplifiedBreadcrumbs } from '@elastic/eui';
 import classNames from 'classnames';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import useObservable from 'react-use/lib/useObservable';
 import { Observable } from 'rxjs';
-import { ChromeBreadcrumb } from '../../chrome_service';
-
-import './header_breadcrumbs.scss';
+import { ChromeBreadcrumb, ChromeBreadcrumbEnricher } from '../../chrome_service';
 
 interface Props {
   appTitle$: Observable<string>;
   breadcrumbs$: Observable<ChromeBreadcrumb[]>;
-  isDarkMode?: boolean;
+  breadcrumbsEnricher$: Observable<ChromeBreadcrumbEnricher | undefined>;
+  useUpdatedHeader?: boolean;
+  renderFullLength?: boolean;
+  hideTrailingSeparator?: boolean;
 }
 
-export function HeaderBreadcrumbs({ appTitle$, breadcrumbs$, isDarkMode }: Props) {
+export function HeaderBreadcrumbs({
+  appTitle$,
+  breadcrumbs$,
+  breadcrumbsEnricher$,
+  useUpdatedHeader,
+  renderFullLength,
+  hideTrailingSeparator,
+}: Props) {
   const appTitle = useObservable(appTitle$, 'OpenSearch Dashboards');
   const breadcrumbs = useObservable(breadcrumbs$, []);
-  const className = isDarkMode ? 'osdHeaderBreadcrumbs--dark' : 'osdHeaderBreadcrumbs';
+  const [breadcrumbEnricher, setBreadcrumbEnricher] = useState<
+    ChromeBreadcrumbEnricher | undefined
+  >(undefined);
+
+  useEffect(() => {
+    const sub = breadcrumbsEnricher$.subscribe((enricher) => {
+      setBreadcrumbEnricher(() => enricher);
+    });
+    return () => sub.unsubscribe();
+  });
+
   let crumbs = breadcrumbs;
 
   if (breadcrumbs.length === 0 && appTitle) {
     crumbs = [{ text: appTitle }];
+  }
+
+  if (breadcrumbEnricher) {
+    crumbs = breadcrumbEnricher(crumbs);
   }
 
   crumbs = crumbs.map((breadcrumb, i) => ({
@@ -59,17 +81,31 @@ export function HeaderBreadcrumbs({ appTitle$, breadcrumbs$, isDarkMode }: Props
       'breadcrumb',
       breadcrumb['data-test-subj'],
       i === 0 && 'first',
-      i === breadcrumbs.length - 1 && 'last'
+      i === crumbs.length - 1 && 'last'
     ),
-    className: classNames('osdBreadcrumbs'),
   }));
 
-  return (
-    <EuiHeaderBreadcrumbs
-      breadcrumbs={crumbs}
-      max={10}
-      data-test-subj="breadcrumbs"
-      className={className}
-    />
-  );
+  const remainingCrumbs = useUpdatedHeader ? crumbs.slice(0, -1) : crumbs;
+
+  if (hideTrailingSeparator) {
+    return (
+      <EuiSimplifiedBreadcrumbs
+        breadcrumbs={crumbs}
+        hideLastBreadCrumb={!renderFullLength}
+        max={10}
+        data-test-subj="breadcrumbs"
+        hideTrailingSeparator
+        disableTrailingLink
+      />
+    );
+  } else {
+    return (
+      <EuiHeaderBreadcrumbs
+        breadcrumbs={renderFullLength ? crumbs : remainingCrumbs}
+        max={10}
+        data-test-subj="breadcrumbs"
+        simplify={!!useUpdatedHeader}
+      />
+    );
+  }
 }

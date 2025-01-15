@@ -53,6 +53,9 @@ const createSetupContract = (): IndexPatternManagementSetup => ({
   environment: {
     update: jest.fn(),
   },
+  columns: {
+    register: jest.fn(),
+  },
 });
 
 const createStartContract = (): IndexPatternManagementStart => ({
@@ -123,6 +126,9 @@ const createIndexPatternManagmentContext = () => {
     data,
     indexPatternManagementStart: createStartContract(),
     setBreadcrumbs: () => {},
+    navigationUI: {
+      HeaderControl: () => null,
+    },
   };
 };
 

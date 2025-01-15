@@ -29,6 +29,7 @@
  */
 
 import _ from 'lodash';
+import { parse } from '@osd/std';
 import {
   OpenSearchResponse,
   SavedObject,
@@ -90,10 +91,7 @@ export async function applyOpenSearchResp(
       let searchSourceValues = parseSearchSourceJSON(meta.searchSourceJSON);
 
       if (config.searchSource) {
-        searchSourceValues = injectSearchSourceReferences(
-          searchSourceValues as any,
-          resp.references
-        );
+        searchSourceValues = injectSearchSourceReferences(searchSourceValues, resp.references);
         savedObject.searchSource = await dependencies.search.searchSource.create(
           searchSourceValues
         );
@@ -109,7 +107,7 @@ export async function applyOpenSearchResp(
         // remember the reference - this is required for error handling on legacy imports
         savedObject.unresolvedIndexPatternReference = {
           name: 'kibanaSavedObjectMeta.searchSourceJSON.index',
-          id: JSON.parse(meta.searchSourceJSON).index,
+          id: parse(meta.searchSourceJSON).index,
           type: 'index-pattern',
         };
       }

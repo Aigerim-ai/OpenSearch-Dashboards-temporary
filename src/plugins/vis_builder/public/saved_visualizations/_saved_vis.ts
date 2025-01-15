@@ -22,6 +22,7 @@ export function createSavedVisBuilderVisClass(services: SavedObjectOpenSearchDas
       description: 'text',
       visualizationState: 'text',
       styleState: 'text',
+      uiState: 'text',
       version: 'integer',
     };
 
@@ -44,11 +45,13 @@ export function createSavedVisBuilderVisClass(services: SavedObjectOpenSearchDas
           description: '',
           visualizationState: '{}',
           styleState: '{}',
-          version: 2,
+          uiState: '{}',
+          version: 3,
         },
       });
       this.showInRecentlyAccessed = true;
       this.getFullPath = () => `/app/${PLUGIN_ID}${EDIT_PATH}/${this.id}`;
+      this.getOpenSearchType = () => VISBUILDER_SAVED_OBJECT;
     }
   }
 

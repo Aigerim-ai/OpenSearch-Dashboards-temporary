@@ -32,6 +32,7 @@ import $ from 'jquery';
 import _ from 'lodash';
 import d3 from 'd3';
 import { i18n } from '@osd/i18n';
+import { euiThemeVars } from '@osd/ui-shared-deps/theme';
 import * as topojson from 'topojson-client';
 import { getNotifications } from './opensearch_dashboards_services';
 import { colorUtil, OpenSearchDashboardsMapLayer } from '../../maps_legacy/public';
@@ -46,7 +47,7 @@ import {
 const EMPTY_STYLE = {
   weight: 1,
   opacity: 0.6,
-  color: 'rgb(200,200,200)',
+  color: euiThemeVars.euiColorMediumShade,
   fillOpacity: 0,
 };
 
@@ -99,7 +100,8 @@ export class ChoroplethLayer extends OpenSearchDashboardsMapLayer {
     leaflet,
     layerChosenByUser,
     http,
-    uiSettings
+    uiSettings,
+    dataSourceRefId
   ) {
     super();
     this._serviceSettings = serviceSettings;
@@ -118,6 +120,7 @@ export class ChoroplethLayer extends OpenSearchDashboardsMapLayer {
     this._http = http;
     this._visParams = null;
     this._uiSettings = uiSettings;
+    this._dataSourceRefId = dataSourceRefId;
 
     // eslint-disable-next-line no-undef
     this._leafletLayer = this._leaflet.geoJson(null, {
@@ -248,7 +251,7 @@ CORS configuration of the server permits requests from the OpenSearch Dashboards
     try {
       const services = getServices(this._http);
       const indexSize = this._uiSettings.get(CUSTOM_VECTOR_MAP_MAX_SIZE_SETTING);
-      const result = await services.getIndexData(this._layerName, indexSize);
+      const result = await services.getIndexData(this._layerName, indexSize, this._dataSourceRefId);
 
       const finalResult = {
         type: 'FeatureCollection',
@@ -345,7 +348,8 @@ CORS configuration of the server permits requests from the OpenSearch Dashboards
     leaflet,
     layerChosenByUser,
     http,
-    uiSettings
+    uiSettings,
+    dataSourceRefId
   ) {
     const clonedLayer = new ChoroplethLayer(
       name,
@@ -358,7 +362,8 @@ CORS configuration of the server permits requests from the OpenSearch Dashboards
       leaflet,
       layerChosenByUser,
       http,
-      uiSettings
+      uiSettings,
+      dataSourceRefId
     );
     clonedLayer.setJoinField(this._joinField);
     clonedLayer.setColorRamp(this._colorRamp);

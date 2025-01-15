@@ -28,12 +28,11 @@
  * under the License.
  */
 
-// @ts-ignore
-import { euiColorAccent } from '@elastic/eui/dist/eui_theme_light.json';
 import React, { Component, Fragment } from 'react';
 
 import {
   EuiBadge,
+  EuiSmallButton,
   EuiButton,
   EuiContextMenuItem,
   EuiContextMenuPanel,
@@ -74,14 +73,14 @@ export class CreateButton extends Component<Props, State> {
 
     if (options.length === 1) {
       return (
-        <EuiButton
+        <EuiSmallButton
           data-test-subj="createIndexPatternButton"
           fill={true}
           onClick={options[0].onClick}
-          iconType="plusInCircle"
+          iconType="plus"
         >
           {children}
-        </EuiButton>
+        </EuiSmallButton>
       );
     }
 
@@ -109,6 +108,7 @@ export class CreateButton extends Component<Props, State> {
           anchorPosition="downLeft"
         >
           <EuiContextMenuPanel
+            size="s"
             items={options.map((option) => {
               return (
                 <EuiContextMenuItem
@@ -116,7 +116,7 @@ export class CreateButton extends Component<Props, State> {
                   onClick={option.onClick}
                   data-test-subj={option.testSubj}
                 >
-                  <EuiDescriptionList style={{ whiteSpace: 'nowrap' }}>
+                  <EuiDescriptionList style={{ whiteSpace: 'nowrap' }} compressed={true}>
                     <EuiDescriptionListTitle>
                       {option.text}
                       {option.isBeta ? <Fragment> {this.renderBetaBadge()}</Fragment> : null}
@@ -148,7 +148,7 @@ export class CreateButton extends Component<Props, State> {
 
   private renderBetaBadge = () => {
     return (
-      <EuiBadge color={euiColorAccent}>
+      <EuiBadge color="accent">
         <FormattedMessage
           id="indexPatternManagement.indexPatternList.createButton.betaLabel"
           defaultMessage="Beta"

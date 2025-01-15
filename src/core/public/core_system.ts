@@ -29,10 +29,15 @@
  */
 
 import { pick } from '@osd/std';
-import { CoreId } from '../server';
-import { PackageInfo, EnvironmentMode } from '../server/types';
 import { CoreSetup, CoreStart } from '.';
+import { CoreId } from '../server';
+import { EnvironmentMode, PackageInfo } from '../server/types';
+import { ApplicationService } from './application';
+import type { InternalApplicationSetup, InternalApplicationStart } from './application/types';
 import { ChromeService } from './chrome';
+import { ContextService } from './context';
+import { CoreApp } from './core_app';
+import { DocLinksService } from './doc_links';
 import { FatalErrorsService, FatalErrorsSetup } from './fatal_errors';
 import { HttpService } from './http';
 import { I18nService } from './i18n';
@@ -42,18 +47,14 @@ import {
   InjectedMetadataSetup,
   InjectedMetadataStart,
 } from './injected_metadata';
+import { IntegrationsService } from './integrations';
 import { NotificationsService } from './notifications';
 import { OverlayService } from './overlays';
 import { PluginsService } from './plugins';
-import { UiSettingsService } from './ui_settings';
-import { ApplicationService } from './application';
-import { DocLinksService } from './doc_links';
 import { RenderingService } from './rendering';
 import { SavedObjectsService } from './saved_objects';
-import { ContextService } from './context';
-import { IntegrationsService } from './integrations';
-import { CoreApp } from './core_app';
-import type { InternalApplicationSetup, InternalApplicationStart } from './application/types';
+import { UiSettingsService } from './ui_settings';
+import { WorkspacesService } from './workspace';
 
 interface Params {
   rootDomElement: HTMLElement;
@@ -110,6 +111,7 @@ export class CoreSystem {
 
   private readonly rootDomElement: HTMLElement;
   private readonly coreContext: CoreContext;
+  private readonly workspaces: WorkspacesService;
   private fatalErrorsSetup: FatalErrorsSetup | null = null;
 
   constructor(params: Params) {
@@ -138,6 +140,7 @@ export class CoreSystem {
     this.rendering = new RenderingService();
     this.application = new ApplicationService();
     this.integrations = new IntegrationsService();
+    this.workspaces = new WorkspacesService();
 
     this.coreContext = { coreId: Symbol('core'), env: injectedMetadata.env };
 
@@ -160,6 +163,7 @@ export class CoreSystem {
       const http = this.http.setup({ injectedMetadata, fatalErrors: this.fatalErrorsSetup });
       const uiSettings = this.uiSettings.setup({ http, injectedMetadata });
       const notifications = this.notifications.setup({ uiSettings });
+      const workspaces = this.workspaces.setup();
 
       const pluginDependencies = this.plugins.getOpaqueIds();
       const context = this.context.setup({
@@ -167,15 +171,18 @@ export class CoreSystem {
       });
       const application = this.application.setup({ context, http });
       this.coreApp.setup({ application, http, injectedMetadata, notifications });
+      const chrome = this.chrome.setup({ uiSettings });
 
       const core: InternalCoreSetup = {
         application,
         context,
+        chrome,
         fatalErrors: this.fatalErrorsSetup,
         http,
         injectedMetadata,
         notifications,
         uiSettings,
+        workspaces,
       };
 
       // Services that do not expose contracts at setup
@@ -219,7 +226,8 @@ export class CoreSystem {
         overlays,
         targetDomElement: notificationsTargetDomElement,
       });
-      const application = await this.application.start({ http, overlays });
+      const workspaces = this.workspaces.start();
+      const application = await this.application.start({ http, overlays, workspaces });
       const chrome = await this.chrome.start({
         application,
         docLinks,
@@ -227,6 +235,8 @@ export class CoreSystem {
         injectedMetadata,
         notifications,
         uiSettings,
+        overlays,
+        workspaces,
       });
 
       this.coreApp.start({ application, http, notifications, uiSettings });
@@ -242,6 +252,7 @@ export class CoreSystem {
         overlays,
         savedObjects,
         uiSettings,
+        workspaces,
       }));
 
       const core: InternalCoreStart = {
@@ -256,11 +267,16 @@ export class CoreSystem {
         overlays,
         uiSettings,
         fatalErrors,
+        workspaces,
       };
 
       await this.plugins.start(core);
 
-      const { useExpandedHeader = true } = injectedMetadata.getBranding() ?? {};
+      let { useExpandedHeader = true } = injectedMetadata.getBranding() ?? {};
+      if (uiSettings.get('home:useNewHomePage')) {
+        useExpandedHeader = false;
+        this.rootDomElement.classList.add('headerIsDense');
+      }
 
       // ensure the rootDomElement is empty
       this.rootDomElement.textContent = '';
@@ -303,6 +319,7 @@ export class CoreSystem {
     this.chrome.stop();
     this.i18n.stop();
     this.application.stop();
+    this.workspaces.stop();
     this.rootDomElement.textContent = '';
   }
 }

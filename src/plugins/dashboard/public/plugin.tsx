@@ -34,6 +34,9 @@ import { filter, map } from 'rxjs/operators';
 import { i18n } from '@osd/i18n';
 import { FormattedMessage } from '@osd/i18n/react';
 
+import { UrlForwardingSetup, UrlForwardingStart } from 'src/plugins/url_forwarding/public';
+import { isEmpty } from 'lodash';
+import { createHashHistory } from 'history';
 import {
   App,
   AppMountParameters,
@@ -43,10 +46,9 @@ import {
   Plugin,
   PluginInitializerContext,
   SavedObjectsClientContract,
+  WorkspaceAvailability,
   ScopedHistory,
-} from 'src/core/public';
-import { UrlForwardingSetup, UrlForwardingStart } from 'src/plugins/url_forwarding/public';
-import { isEmpty } from 'lodash';
+} from '../../../../src/core/public';
 import { UsageCollectionSetup } from '../../usage_collection/public';
 import {
   CONTEXT_MENU_TRIGGER,
@@ -72,14 +74,18 @@ import {
   ExitFullScreenButton as ExitFullScreenButtonUi,
   ExitFullScreenButtonProps,
 } from '../../opensearch_dashboards_react/public';
-import { createOsdUrlTracker, Storage } from '../../opensearch_dashboards_utils/public';
 import {
-  initAngularBootstrap,
+  createOsdUrlTracker,
+  Storage,
+  createOsdUrlStateStorage,
+  withNotifyOnErrors,
+} from '../../opensearch_dashboards_utils/public';
+import {
   OpenSearchDashboardsLegacySetup,
   OpenSearchDashboardsLegacyStart,
 } from '../../opensearch_dashboards_legacy/public';
 import { FeatureCatalogueCategory, HomePublicPluginSetup } from '../../../plugins/home/public';
-import { DEFAULT_APP_CATEGORIES } from '../../../core/public';
+import { DEFAULT_APP_CATEGORIES, DEFAULT_NAV_GROUPS } from '../../../core/public';
 
 import {
   ACTION_CLONE_PANEL,
@@ -93,7 +99,6 @@ import {
   DashboardContainerFactoryDefinition,
   ExpandPanelAction,
   ExpandPanelActionContext,
-  RenderDeps,
   ReplacePanelAction,
   ReplacePanelActionContext,
   ACTION_UNLINK_FROM_LIBRARY,
@@ -121,7 +126,7 @@ import {
   AttributeServiceOptions,
   ATTRIBUTE_SERVICE_KEY,
 } from './attribute_service/attribute_service';
-import { DashboardProvider } from './types';
+import { DashboardProvider, DashboardServices } from './types';
 
 declare module '../../share/public' {
   export interface UrlGeneratorStateMapping {
@@ -263,6 +268,7 @@ export class DashboardPlugin
       return {
         capabilities: coreStart.application.capabilities,
         application: coreStart.application,
+        chrome: coreStart.chrome,
         notifications: coreStart.notifications,
         overlays: coreStart.overlays,
         embeddable: deps.embeddable,
@@ -344,14 +350,14 @@ export class DashboardPlugin
     registerDashboardProvider({
       savedObjectsType: 'dashboard',
       savedObjectsName: 'Dashboard',
-      appId: 'dashboards',
+      appId: 'dashboard',
       viewUrlPathFn: (obj) => `#/view/${obj.id}`,
       editUrlPathFn: (obj) => `/view/${obj.id}?_a=(viewMode:edit)`,
       createUrl: core.http.basePath.prepend('/app/dashboards#/create'),
       createSortText: 'Dashboard',
       createLinkText: (
         <FormattedMessage
-          id="opensearch-dashboards-react.tableListView.listing.createNewItemButtonLabel"
+          id="dashboard.tableListView.listing.createNewItemButtonLabel"
           defaultMessage="{entityName}"
           values={{ entityName: 'Dashboard' }}
         />
@@ -360,8 +366,9 @@ export class DashboardPlugin
 
     const app: App = {
       id: DashboardConstants.DASHBOARDS_ID,
-      title: 'Dashboard',
+      title: 'Dashboards',
       order: 2500,
+      workspaceAvailability: WorkspaceAvailability.insideWorkspace,
       euiIconType: 'inputOutput',
       defaultPath: `#${DashboardConstants.LANDING_PAGE_PATH}`,
       updater$: this.appStateUpdater,
@@ -369,6 +376,13 @@ export class DashboardPlugin
       mount: async (params: AppMountParameters) => {
         const [coreStart, pluginsStart, dashboardStart] = await core.getStartServices();
         this.currentHistory = params.history;
+
+        // make sure the index pattern list is up to date
+        pluginsStart.data.indexPatterns.clearCache();
+        // make sure a default index pattern exists
+        // if not, the page will be redirected to management and dashboard won't be rendered
+        await pluginsStart.data.indexPatterns.ensureDefaultIndexPattern();
+
         appMounted();
         const {
           embeddable: embeddableStart,
@@ -380,8 +394,23 @@ export class DashboardPlugin
           savedObjects,
         } = pluginsStart;
 
-        const deps: RenderDeps = {
+        // dispatch synthetic hash change event to update hash history objects
+        // this is necessary because hash updates triggered by using popState won't trigger this event naturally.
+        const unlistenParentHistory = params.history.listen(() => {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        });
+
+        const history = createHashHistory(); // need more research
+        const services: DashboardServices = {
+          ...coreStart,
           pluginInitializerContext: this.initializerContext,
+          opensearchDashboardsVersion: this.initializerContext.env.packageInfo.version,
+          history,
+          osdUrlStateStorage: createOsdUrlStateStorage({
+            history,
+            useHash: coreStart.uiSettings.get('state:storeInSessionStorage'),
+            ...withNotifyOnErrors(coreStart.notifications.toasts),
+          }),
           core: coreStart,
           dashboardConfig,
           navigateToDefaultApp,
@@ -404,26 +433,64 @@ export class DashboardPlugin
           },
           localStorage: new Storage(localStorage),
           usageCollection,
-          scopedHistory: () => this.currentHistory!,
+          scopedHistory: params.history,
           setHeaderActionMenu: params.setHeaderActionMenu,
-          savedObjects,
+          savedObjectsPublic: savedObjects,
           restorePreviousUrl,
+          toastNotifications: coreStart.notifications.toasts,
         };
         // make sure the index pattern list is up to date
         await dataStart.indexPatterns.clearCache();
-        const { renderApp } = await import('./application/application');
         params.element.classList.add('dshAppContainer');
-        const unmount = renderApp(params.element, params.appBasePath, deps);
+        const { renderApp } = await import('./application');
+        const unmount = renderApp(params, services);
         return () => {
+          params.element.classList.remove('dshAppContainer');
+          unlistenParentHistory();
           unmount();
           appUnMounted();
         };
       },
     };
 
-    initAngularBootstrap();
-
     core.application.register(app);
+
+    core.chrome.navGroup.addNavLinksToGroup(DEFAULT_NAV_GROUPS.observability, [
+      {
+        id: app.id,
+        order: 400,
+        category: undefined,
+      },
+    ]);
+    core.chrome.navGroup.addNavLinksToGroup(DEFAULT_NAV_GROUPS['security-analytics'], [
+      {
+        id: app.id,
+        order: 400,
+        category: undefined,
+      },
+    ]);
+    core.chrome.navGroup.addNavLinksToGroup(DEFAULT_NAV_GROUPS.essentials, [
+      {
+        id: app.id,
+        order: 300,
+        category: undefined,
+      },
+    ]);
+    core.chrome.navGroup.addNavLinksToGroup(DEFAULT_NAV_GROUPS.search, [
+      {
+        id: app.id,
+        order: 300,
+        category: undefined,
+      },
+    ]);
+    core.chrome.navGroup.addNavLinksToGroup(DEFAULT_NAV_GROUPS.all, [
+      {
+        id: app.id,
+        order: 300,
+        category: undefined,
+      },
+    ]);
+
     urlForwarding.forwardApp(
       DashboardConstants.DASHBOARDS_ID,
       DashboardConstants.DASHBOARDS_ID,
@@ -502,7 +569,12 @@ export class DashboardPlugin
       embeddable,
     } = plugins;
 
-    const SavedObjectFinder = getSavedObjectFinder(core.savedObjects, core.uiSettings);
+    const SavedObjectFinder = getSavedObjectFinder(
+      core.savedObjects,
+      core.uiSettings,
+      plugins.data,
+      core.application
+    );
 
     const changeViewAction = new ReplacePanelAction(
       core,

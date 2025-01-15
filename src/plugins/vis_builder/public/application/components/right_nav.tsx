@@ -5,11 +5,12 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  EuiSuperSelect,
+  EuiCompressedSuperSelect,
   EuiSuperSelectOption,
   EuiIcon,
   IconType,
   EuiConfirmModal,
+  EuiText,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
 import { FormattedMessage } from '@osd/i18n/react';
@@ -25,7 +26,7 @@ import {
 } from '../utils/state_management';
 import { getPersistedAggParams } from '../utils/get_persisted_agg_params';
 
-export const RightNav = () => {
+export const RightNavUI = () => {
   const { ui, name: activeVisName } = useVisualizationType();
   const [confirmAggs, setConfirmAggs] = useState<ActiveVisPayload | undefined>();
   const {
@@ -72,7 +73,7 @@ export const RightNav = () => {
   return (
     <section className="vbSidenav right">
       <div className="vbSidenav__header">
-        <EuiSuperSelect
+        <EuiCompressedSuperSelect
           options={options}
           valueOfSelected={activeVisName}
           onChange={handleVisTypeChange}
@@ -103,12 +104,14 @@ export const RightNav = () => {
           maxWidth="300px"
           data-test-subj="confirmVisChangeModal"
         >
-          <p>
-            <FormattedMessage
-              id="visBuilder.rightNav.changeVisType.modalDescription"
-              defaultMessage="Certain field configurations may be lost when changing visualization types and you may need to reconfigure those fields. Do you want to continue?"
-            />
-          </p>
+          <EuiText size="s">
+            <p>
+              <FormattedMessage
+                id="visBuilder.rightNav.changeVisType.modalDescription"
+                defaultMessage="Certain field configurations may be lost when changing visualization types and you may need to reconfigure those fields. Do you want to continue?"
+              />
+            </p>
+          </EuiText>
         </EuiConfirmModal>
       )}
     </section>
@@ -121,3 +124,7 @@ const OptionItem = ({ icon, title }: { icon: IconType; title: string }) => (
     <span>{title}</span>
   </>
 );
+
+// The app uses EuiResizableContainer that triggers a rerender for every mouseover action.
+// To prevent this child component from unnecessarily rerendering in that instance, it needs to be memoized
+export const RightNav = React.memo(RightNavUI);

@@ -8,9 +8,6 @@ $visLegendLineHeight: $euiSize;
 
 .visLegend__toggle {
   border-radius: $euiBorderRadius;
-  position: absolute;
-  bottom: 0;
-  left: 0;
   display: flex;
   padding: $euiSizeXS;
   background-color: $euiColorEmptyShade;
@@ -22,6 +19,12 @@ $visLegendLineHeight: $euiSize;
     box-shadow: none;
     background-color: $euiFocusBackgroundColor !important;
   }
+}
+
+.visLegend__toggleTooltipAnchor {
+  position: absolute;
+  bottom: 0;
+  left: 0;
 }
 
 .visLegend__toggle--isOpen {
@@ -84,7 +87,7 @@ $visLegendLineHeight: $euiSize;
 }
 
 .visLegend__valueColorPicker {
-  width: ($euiSizeL * 8); // 8 columns
+  width: ($euiSizeL * 10); // 10 columns
 }
 
 .visLegend__valueColorPickerDot {

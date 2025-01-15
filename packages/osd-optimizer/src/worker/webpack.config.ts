@@ -50,7 +50,7 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
 
   const commonConfig: webpack.Configuration = {
     node: { fs: 'empty' },
-    context: bundle.contextDir,
+    context: Path.normalize(bundle.contextDir),
     cache: true,
     entry: {
       [bundle.id]: ENTRY_CREATOR,
@@ -69,6 +69,7 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
           info.absoluteResourcePath
         )}${info.query}`,
       jsonpFunction: `${bundle.id}_bundle_jsonpfunction`,
+      hashFunction: 'Xxh64',
     },
 
     optimization: {
@@ -136,6 +137,12 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
                 sourceMap: !worker.dist,
               },
             },
+            {
+              loader: 'comment-stripper',
+              options: {
+                language: 'css',
+              },
+            },
           ],
         },
         {
@@ -164,6 +171,12 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
                   },
                 },
                 {
+                  loader: 'comment-stripper',
+                  options: {
+                    language: 'css',
+                  },
+                },
+                {
                   loader: 'sass-loader',
                   options: {
                     additionalData(content: string, loaderContext: webpack.loader.LoaderContext) {
@@ -176,12 +189,11 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
                       )};\n${content}`;
                     },
                     webpackImporter: false,
-                    implementation: require('sass'),
+                    implementation: require('sass-embedded'),
                     sassOptions: {
                       outputStyle: 'compressed',
                       includePaths: [Path.resolve(worker.repoRoot, 'node_modules')],
                       sourceMapRoot: `/${bundle.type}:${bundle.id}`,
-                      fiber: require('fibers'),
                     },
                   },
                 },
@@ -205,9 +217,30 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
         },
         {
           test: /\.(js|tsx?)$/,
-          // vega-lite and some of its dependencies don't have es5 builds
-          // so we need to build from source and transpile for webpack v4
-          exclude: /[\/\\]node_modules[\/\\](?!vega-(lite|label|functions)[\/\\])/,
+          exclude: [
+            /* vega-lite and some of its dependencies don't have es5 builds
+             * so we need to build from source and transpile for webpack v4
+             */
+            /[\/\\]node_modules[\/\\](?!vega-(lite|label|functions)[\/\\])/,
+
+            // Don't attempt to look into release artifacts of the plugins
+            /[\/\\]plugins[\/\\][^\/\\]+[\/\\]build[\/\\]/,
+          ],
+          use: {
+            loader: 'babel-loader',
+            options: {
+              babelrc: false,
+              envName: worker.dist ? 'production' : 'development',
+              presets: [BABEL_PRESET_PATH],
+            },
+          },
+        },
+        {
+          test: /\.js$/,
+          /* reactflow and some of its dependencies don't have es5 builds
+           * so we need to build from source and transpile for webpack v4
+           */
+          include: /node_modules[\\/]@?reactflow/,
           use: {
             loader: 'babel-loader',
             options: {
@@ -223,6 +256,16 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
             loader: 'raw-loader',
           },
         },
+        {
+          test: /\.cjs$/,
+          include: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [BABEL_PRESET_PATH],
+            },
+          },
+        },
       ],
     },
 
@@ -230,7 +273,6 @@ export function getWebpackConfig(bundle: Bundle, bundleRefs: BundleRefs, worker:
       extensions: ['.js', '.ts', '.tsx', '.json'],
       mainFields: ['browser', 'main'],
       alias: {
-        tinymath: require.resolve('tinymath/lib/tinymath.es5.js'),
         core_app_image_assets: Path.resolve(worker.repoRoot, 'src/core/public/core_app/images'),
       },
     },

@@ -37,6 +37,7 @@ import {
   SavedObjectsClientContract,
   IUiSettingsClient,
   ApplicationStart,
+  WorkspacesSetup,
 } from 'opensearch-dashboards/public';
 import { UiStatsMetricType } from '@osd/analytics';
 import { TelemetryPluginStart } from '../../../telemetry/public';
@@ -44,8 +45,11 @@ import { UrlForwardingStart } from '../../../url_forwarding/public';
 import { TutorialService } from '../services/tutorials';
 import { FeatureCatalogueRegistry } from '../services/feature_catalogue';
 import { EnvironmentService } from '../services/environment';
+import { SectionTypeService } from '../services/section_type';
 import { ConfigSchema } from '../../config';
 import { HomePluginBranding } from '..';
+import { DataSourcePluginStart } from '../../../data_source/public';
+import { ContentManagementPluginStart } from '../../../content_management/public';
 
 export interface HomeOpenSearchDashboardsServices {
   indexPatternService: any;
@@ -54,6 +58,7 @@ export interface HomeOpenSearchDashboardsServices {
   application: ApplicationStart;
   uiSettings: IUiSettingsClient;
   urlForwarding: UrlForwardingStart;
+  contentManagement: ContentManagementPluginStart;
   homeConfig: ConfigSchema;
   featureCatalogue: FeatureCatalogueRegistry;
   http: HttpStart;
@@ -71,6 +76,9 @@ export interface HomeOpenSearchDashboardsServices {
     getInjectedVar: (name: string, defaultValue?: any) => unknown;
     getBranding: () => HomePluginBranding;
   };
+  dataSource?: DataSourcePluginStart;
+  sectionTypes: SectionTypeService;
+  workspaces?: WorkspacesSetup;
 }
 
 let services: HomeOpenSearchDashboardsServices | null = null;

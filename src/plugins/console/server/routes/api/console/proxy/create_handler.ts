@@ -31,8 +31,7 @@
 import { OpenSearchDashboardsRequest, RequestHandler } from 'opensearch-dashboards/server';
 import { trimStart } from 'lodash';
 import { Readable } from 'stream';
-
-import { ApiResponse } from '@opensearch-project/opensearch/';
+import { stringify } from '@osd/std';
 
 // eslint-disable-next-line @osd/eslint/no-restricted-paths
 import { ensureRawRequest } from '../../../../../../../core/server/http/router';
@@ -88,10 +87,6 @@ export const createHandler = ({
 }: RouteDependencies): RequestHandler<unknown, Query, Body> => async (ctx, request, response) => {
   const { body, query } = request;
   const { path, method, dataSourceId } = query;
-  const client = dataSourceId
-    ? await ctx.dataSource.opensearch.getClient(dataSourceId)
-    : ctx.core.opensearch.client.asCurrentUser;
-  let opensearchResponse: ApiResponse;
 
   if (!pathFilters.some((re) => re.test(path))) {
     return response.forbidden({
@@ -103,6 +98,10 @@ export const createHandler = ({
   }
 
   try {
+    const client = dataSourceId
+      ? await ctx.dataSource.opensearch.getClient(dataSourceId)
+      : ctx.core.opensearch.client.asCurrentUserWithLongNumeralsSupport;
+
     // TODO: proxy header will fail sigv4 auth type in data source, need create issue in opensearch-js repo to track
     const requestHeaders = dataSourceId
       ? {}
@@ -111,19 +110,29 @@ export const createHandler = ({
         };
 
     const bufferedBody = await buildBufferedBody(body);
-    opensearchResponse = await client.transport.request(
+    const opensearchResponse = await client.transport.request(
       { path: toUrlPath(path), method, body: bufferedBody },
       { headers: requestHeaders }
     );
 
-    const { statusCode, body: responseContent, warnings } = opensearchResponse;
+    const {
+      statusCode,
+      body: responseContent,
+      warnings,
+      headers: responseHeaders,
+    } = opensearchResponse;
 
     if (method.toUpperCase() !== 'HEAD') {
+      /* If a response is a parse JSON object, we need to use a custom `stringify` to handle BigInt
+       * values.
+       */
+      const isJSONResponse = responseHeaders?.['content-type']?.includes?.('application/json');
       return response.custom({
         statusCode: statusCode!,
-        body: responseContent,
+        body: isJSONResponse ? stringify(responseContent) : responseContent,
         headers: {
           warning: warnings || '',
+          ...(isJSONResponse ? { 'Content-Type': 'application/json; charset=utf-8' } : {}),
         },
       });
     }
@@ -138,8 +147,8 @@ export const createHandler = ({
     });
   } catch (e: any) {
     const isResponseErrorFlag = isResponseError(e);
-    if (!isResponseError) log.error(e);
-    const errorMessage = isResponseErrorFlag ? JSON.stringify(e.meta.body) : e.message;
+    if (!isResponseErrorFlag) log.error(e);
+    const errorMessage = isResponseErrorFlag ? stringify(e.meta.body) : e.message;
     // core http route handler has special logic that asks for stream readable input to pass error opaquely
     const errorResponseBody = new Readable({
       read() {
@@ -148,7 +157,7 @@ export const createHandler = ({
       },
     });
     return response.customError({
-      statusCode: isResponseErrorFlag ? e.statusCode : 502,
+      statusCode: e.statusCode || 502,
       body: errorResponseBody,
       headers: {
         'Content-Type': 'application/json',

@@ -60,9 +60,9 @@ export function registerSearchRoute(
       const [, , selfStart] = await getStartServices();
 
       try {
-        const response = await selfStart.search.search(
+        const { withLongNumeralsSupport, ...response } = await selfStart.search.search(
           context,
-          { ...searchRequest, id },
+          { ...searchRequest, id, rawRequest: request },
           {
             abortSignal,
             strategy,
@@ -76,6 +76,7 @@ export function registerSearchRoute(
               rawResponse: shimHitsTotal(response.rawResponse),
             },
           },
+          withLongNumeralsSupport,
         });
       } catch (err) {
         return res.customError({
