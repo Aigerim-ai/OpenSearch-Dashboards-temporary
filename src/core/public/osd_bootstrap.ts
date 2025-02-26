@@ -38,6 +38,11 @@ export async function __osdBootstrap__() {
     document.querySelector('osd-injected-metadata')!.getAttribute('data')!
   );
 
+  const globals: any = typeof window === 'undefined' ? {} : window;
+  const themeTag: string = globals.__osdThemeTag__ || '';
+
+  injectedMetadata.branding.darkMode = themeTag.endsWith('dark');
+
   let i18nError: Error | undefined;
   const apmSystem = new ApmSystem(injectedMetadata.vars.apmConfig, injectedMetadata.basePath);
 
@@ -62,4 +67,20 @@ export async function __osdBootstrap__() {
 
   const start = await coreSystem.start();
   await apmSystem.start(start);
+
+  // Display the i18n warning if it exists
+  if ((window as any).__i18nWarning) {
+    const warning = (window as any).__i18nWarning;
+    // eslint-disable-next-line no-console
+    console.warn(`${warning.title}: ${warning.text}`);
+    delete (window as any).__i18nWarning;
+  }
+
+  // Display the locale warning if it exists
+  if ((window as any).__localeWarning) {
+    const warning = (window as any).__localeWarning;
+    // eslint-disable-next-line no-console
+    console.warn(`${warning.title}: ${warning.text}`);
+    delete (window as any).__localeWarning;
+  }
 }

@@ -31,15 +31,36 @@
 import { run, combineErrors } from '@osd/dev-utils';
 import * as Eslint from './eslint';
 import * as Stylelint from './stylelint';
-import { getFilesForCommit, checkFileCasing } from './precommit_hook';
+import {
+  getFilesForCommit,
+  getUnstagedFiles,
+  checkFileCasing,
+  checkDevDocs,
+  checkI18n,
+} from './precommit_hook';
 
 run(
   async ({ log, flags }) => {
     const files = await getFilesForCommit();
+    const unstagedFiles = await getUnstagedFiles();
     const errors = [];
 
     try {
+      // Check if the dev docs sidebar has been updated but not staged
+      await checkDevDocs(log, unstagedFiles);
+    } catch (error) {
+      errors.push(error);
+    }
+
+    try {
       await checkFileCasing(log, files);
+    } catch (error) {
+      errors.push(error);
+    }
+
+    try {
+      const result = await checkI18n(log, files);
+      if (Array.isArray(result)) errors.push(...result);
     } catch (error) {
       errors.push(error);
     }

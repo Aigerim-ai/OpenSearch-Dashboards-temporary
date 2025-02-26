@@ -70,12 +70,20 @@ import {
   SavedObjectsServiceSetup,
   SavedObjectsServiceStart,
 } from './saved_objects';
+import {
+  AsyncLocalStorageContext,
+  DynamicConfigServiceSetup,
+  DynamicConfigServiceStart,
+  IDynamicConfigurationClient,
+} from './config';
 import { CapabilitiesSetup, CapabilitiesStart } from './capabilities';
 import { MetricsServiceSetup, MetricsServiceStart } from './metrics';
 import { StatusServiceSetup } from './status';
 import { Auditor, AuditTrailSetup, AuditTrailStart } from './audit_trail';
 import { AppenderConfigType, appendersSchema, LoggingServiceSetup } from './logging';
 import { CoreUsageDataStart } from './core_usage_data';
+import { SecurityServiceSetup } from './security/types';
+import { CrossCompatibilityServiceStart } from './cross_compatibility/types';
 
 // Because of #79265 we need to explicity import, then export these types for
 // scripts/telemetry_check.js to work as expected
@@ -85,6 +93,7 @@ import {
   CoreEnvironmentUsageData,
   CoreServicesUsageData,
 } from './core_usage_data';
+import { WorkspaceSetup, WorkspaceStart } from './workspace';
 
 export { CoreUsageData, CoreConfigUsageData, CoreEnvironmentUsageData, CoreServicesUsageData };
 
@@ -100,6 +109,13 @@ export {
   ConfigDeprecationFactory,
   EnvironmentMode,
   PackageInfo,
+  IDynamicConfigurationClient,
+  DynamicConfigurationClientOptions,
+  ConfigIdentifier,
+  GetConfigProps,
+  BulkGetConfigProps,
+  IDynamicConfigStoreClient,
+  IDynamicConfigStoreClientFactory,
 } from './config';
 export {
   IContextContainer,
@@ -319,6 +335,15 @@ export {
   exportSavedObjectsToStream,
   importSavedObjectsFromStream,
   resolveSavedObjectsImportErrors,
+  ACL,
+  Principals,
+  PrincipalType,
+  Permissions,
+  SavedObjectsDeleteByWorkspaceOptions,
+  updateDataSourceNameInVegaSpec,
+  extractVegaSpecFromSavedObject,
+  extractTimelineExpression,
+  updateDataSourceNameInTimeline,
 } from './saved_objects';
 
 export {
@@ -334,6 +359,8 @@ export {
   StringValidation,
   StringValidationRegex,
   StringValidationRegexString,
+  CURRENT_USER_PLACEHOLDER,
+  UiSettingScope,
 } from './ui_settings';
 
 export {
@@ -345,8 +372,19 @@ export {
   MetricsServiceStart,
 } from './metrics';
 
-export { AppCategory } from '../types';
-export { DEFAULT_APP_CATEGORIES } from '../utils';
+export {
+  AppCategory,
+  WorkspaceAttribute,
+  PermissionModeId,
+  WorkspaceFindOptions,
+  WorkspacePermissionMode,
+} from '../types';
+export {
+  DEFAULT_APP_CATEGORIES,
+  WORKSPACE_TYPE,
+  DEFAULT_NAV_GROUPS,
+  WORKSPACE_PATH_PREFIX,
+} from '../utils';
 
 export {
   SavedObject,
@@ -388,6 +426,7 @@ export { CoreUsageDataStart } from './core_usage_data';
  *    - {@link IUiSettingsClient | uiSettings.client} - uiSettings client
  *      which uses the credentials of the incoming request
  *    - {@link Auditor | uiSettings.auditor} - AuditTrail client scoped to the incoming request
+ *    - {@link IDynamicConfigurationClient | dynamicConfig.client} - Dynamic configuration client
  *
  * @public
  */
@@ -405,6 +444,10 @@ export interface RequestHandlerContext {
     };
     uiSettings: {
       client: IUiSettingsClient;
+    };
+    dynamicConfig: {
+      client: IDynamicConfigurationClient;
+      asyncLocalStore: AsyncLocalStorageContext | undefined;
     };
     auditor: Auditor;
   };
@@ -437,6 +480,8 @@ export interface CoreSetup<TPluginsStart extends object = object, TStart = unkno
   metrics: MetricsServiceSetup;
   /** {@link SavedObjectsServiceSetup} */
   savedObjects: SavedObjectsServiceSetup;
+  /** {@link SecurityServiceSetup} */
+  security: SecurityServiceSetup;
   /** {@link StatusServiceSetup} */
   status: StatusServiceSetup;
   /** {@link UiSettingsServiceSetup} */
@@ -445,6 +490,10 @@ export interface CoreSetup<TPluginsStart extends object = object, TStart = unkno
   getStartServices: StartServicesAccessor<TPluginsStart, TStart>;
   /** {@link AuditTrailSetup} */
   auditTrail: AuditTrailSetup;
+  /** {@link DynamicConfigServiceSetup} */
+  dynamicConfigService: DynamicConfigServiceSetup;
+  /** {@link WorkspaceSetup} */
+  workspace: WorkspaceSetup;
 }
 
 /**
@@ -482,6 +531,12 @@ export interface CoreStart {
   auditTrail: AuditTrailStart;
   /** @internal {@link CoreUsageDataStart} */
   coreUsageData: CoreUsageDataStart;
+  /** {@link CrossCompatibilityServiceStart} */
+  crossCompatibility: CrossCompatibilityServiceStart;
+  /** {@link DynamicConfigServiceStart} */
+  dynamicConfig: DynamicConfigServiceStart;
+  /** {@link WorkspaceStart} */
+  workspace: WorkspaceStart;
 }
 
 export {
@@ -493,6 +548,7 @@ export {
   PluginsServiceStart,
   PluginOpaqueId,
   AuditTrailStart,
+  CrossCompatibilityServiceStart,
 };
 
 /**

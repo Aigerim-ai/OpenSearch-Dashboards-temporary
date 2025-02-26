@@ -1,21 +1,12 @@
+// Container for the Table Visualization component
 .visTable {
-  display: flex;
-  flex-direction: column;
   flex: 1 0 0;
   overflow: auto;
+
+  @include euiScrollBar;
 }
 
+// Group container for table visualization components
 .visTable__group {
-  padding: $euiSizeS;
-  margin-bottom: $euiSizeL;
-
-  > h3 {
-    text-align: center;
-  }
-}
-
-.visTable__groupInColumns {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
+  flex: 0 0 auto;
 }

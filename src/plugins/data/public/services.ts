@@ -28,7 +28,7 @@
  * under the License.
  */
 
-import { NotificationsStart, CoreStart } from 'src/core/public';
+import { NotificationsStart, CoreStart, ApplicationStart } from 'src/core/public';
 import { FieldFormatsStart } from './field_formats';
 import { createGetterSetter } from '../../opensearch_dashboards_utils/public';
 import { IndexPatternsContract } from './index_patterns';
@@ -59,3 +59,17 @@ export const [getQueryService, setQueryService] = createGetterSetter<
 export const [getSearchService, setSearchService] = createGetterSetter<
   DataPublicPluginStart['search']
 >('Search');
+
+export const [getUiService, setUiService] = createGetterSetter<DataPublicPluginStart['ui']>('Ui');
+
+export const [getApplication, setApplication] = createGetterSetter<ApplicationStart>('Application');
+
+let useNewSavedQueriesUI = false;
+
+export function getUseNewSavedQueriesUI() {
+  return useNewSavedQueriesUI;
+}
+
+export const setUseNewSavedQueriesUI = (value: boolean) => {
+  useNewSavedQueriesUI = value;
+};

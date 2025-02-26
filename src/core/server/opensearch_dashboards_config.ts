@@ -48,6 +48,7 @@ export const config = {
   schema: schema.object({
     enabled: schema.boolean({ defaultValue: true }),
     index: schema.string({ defaultValue: '.kibana' }),
+    configIndex: schema.string({ defaultValue: '.opensearch_dashboards_config' }),
     autocompleteTerminateAfter: schema.duration({ defaultValue: 100000 }),
     autocompleteTimeout: schema.duration({ defaultValue: 1000 }),
     branding: schema.object({
@@ -90,6 +91,15 @@ export const config = {
         defaultValue: 'https://survey.opensearch.org',
       }),
     }),
+    dashboardAdmin: schema.object({
+      groups: schema.arrayOf(schema.string(), {
+        defaultValue: [],
+      }),
+      users: schema.arrayOf(schema.string(), {
+        defaultValue: [],
+      }),
+    }),
+    futureNavigation: schema.boolean({ defaultValue: false }),
   }),
   deprecations,
 };

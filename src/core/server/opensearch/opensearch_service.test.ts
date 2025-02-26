@@ -43,12 +43,14 @@ import { OpenSearchService } from './opensearch_service';
 import { opensearchServiceMock } from './opensearch_service.mock';
 import { opensearchClientMock } from './client/mocks';
 import { duration } from 'moment';
+import { dynamicConfigServiceMock } from '../config/dynamic_config_service.mock';
 
 const delay = async (durationMs: number) =>
   await new Promise((resolve) => setTimeout(resolve, durationMs));
 
 let opensearchService: OpenSearchService;
 const configService = configServiceMock.create();
+const dynamicConfigService = dynamicConfigServiceMock.create();
 const setupDeps = {
   http: httpServiceMock.createInternalSetupContract(),
 };
@@ -77,7 +79,13 @@ let mockLegacyClusterClientInstance: ReturnType<typeof opensearchServiceMock.cre
 beforeEach(() => {
   env = Env.createDefault(REPO_ROOT, getEnvOptions());
 
-  coreContext = { coreId: Symbol(), env, logger, configService: configService as any };
+  coreContext = {
+    coreId: Symbol(),
+    env,
+    logger,
+    configService: configService as any,
+    dynamicConfigService,
+  };
   opensearchService = new OpenSearchService(coreContext);
 
   MockLegacyClusterClient.mockClear();
@@ -264,6 +272,30 @@ describe('#setup', () => {
       sub.unsubscribe();
       await delay(100);
       expect(mockedClient.nodes.info).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('opensearchNodeVersionCompatibility$ avoid polling when opensearch hosts is empty', async () => {
+    const mockedClient = mockClusterClientInstance.asInternalUser;
+    configService.atPath.mockReturnValueOnce(
+      new BehaviorSubject({
+        hosts: [],
+        healthCheck: {
+          delay: duration(2000),
+        },
+        ssl: {
+          verificationMode: 'none',
+        },
+      } as any)
+    );
+    opensearchService = new OpenSearchService(coreContext);
+    const setupContract = await opensearchService.setup(setupDeps);
+
+    // reset all mocks called during setup phase
+    MockLegacyClusterClient.mockClear();
+
+    setupContract.opensearchNodesCompatibility$.subscribe(async () => {
+      expect(mockedClient.nodes.info).toHaveBeenCalledTimes(0);
     });
   });
 });

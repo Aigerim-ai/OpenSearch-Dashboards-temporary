@@ -6,47 +6,56 @@
 import { schema } from '@osd/config-schema';
 import { IRouter } from 'opensearch-dashboards/server';
 
+function handleOpenSearchError(err: any, res: any) {
+  return res.badRequest({
+    body: {
+      ok: false,
+      message: err.message,
+    },
+  });
+}
+
 export function registerGeospatialRoutes(router: IRouter) {
   router.post(
     {
       path: '/api/geospatial/_indices',
       validate: {
         body: schema.object({
-          index: schema.string(),
+          index: schema.string({
+            validate: (value) => {
+              // Custom validation to ensure index ends with "-map"
+              if (!value.endsWith('-map')) {
+                return 'Index name must end with "-map"';
+              }
+            },
+          }),
         }),
+        query: schema.maybe(schema.object({}, { unknowns: 'allow' })),
       },
     },
     async (context, req, res) => {
-      const client = context.core.opensearch.client.asCurrentUser;
       try {
-        const { index } = req.body;
-        const indices = await client.cat.indices({
-          index,
+        let client;
+        // @ts-ignore
+        if (!req.query.dataSourceId) {
+          client = context.core.opensearch.client.asCurrentUser;
+        } else {
+          // @ts-ignore
+          client = await context.dataSource.opensearch.getClient(req.query.dataSourceId);
+        }
+        const response = await client.cat.indices({
+          index: req.body.index,
           format: 'json',
         });
+        const indexNames = response.body.map((index: any) => index.index);
         return res.ok({
           body: {
             ok: true,
-            resp: indices.body,
+            resp: indexNames,
           },
         });
       } catch (err: any) {
-        // Opensearch throws an index_not_found_exception which we'll treat as a success
-        if (err.statusCode === 404) {
-          return res.ok({
-            body: {
-              ok: false,
-              resp: [],
-            },
-          });
-        } else {
-          return res.ok({
-            body: {
-              ok: false,
-              resp: err.message,
-            },
-          });
-        }
+        return handleOpenSearchError(err, res);
       }
     }
   );
@@ -59,11 +68,19 @@ export function registerGeospatialRoutes(router: IRouter) {
           index: schema.string(),
           size: schema.number(),
         }),
+        query: schema.maybe(schema.object({}, { unknowns: 'allow' })),
       },
     },
     async (context, req, res) => {
-      const client = context.core.opensearch.client.asCurrentUser;
       try {
+        let client;
+        // @ts-ignore
+        if (!req.query.dataSourceId) {
+          client = context.core.opensearch.client.asCurrentUser;
+        } else {
+          // @ts-ignore
+          client = await context.dataSource.opensearch.getClient(req.query.dataSourceId);
+        }
         const { index, size } = req.body;
         const params = { index, body: {}, size };
         const results = await client.search(params);
@@ -74,12 +91,7 @@ export function registerGeospatialRoutes(router: IRouter) {
           },
         });
       } catch (err: any) {
-        return res.ok({
-          body: {
-            ok: false,
-            resp: err.message,
-          },
-        });
+        return handleOpenSearchError(err, res);
       }
     }
   );
@@ -91,11 +103,19 @@ export function registerGeospatialRoutes(router: IRouter) {
         body: schema.object({
           index: schema.string(),
         }),
+        query: schema.maybe(schema.object({}, { unknowns: 'allow' })),
       },
     },
     async (context, req, res) => {
-      const client = context.core.opensearch.client.asCurrentUser;
       try {
+        let client;
+        // @ts-ignore
+        if (!req.query.dataSourceId) {
+          client = context.core.opensearch.client.asCurrentUser;
+        } else {
+          // @ts-ignore
+          client = await context.dataSource.opensearch.getClient(req.query.dataSourceId);
+        }
         const { index } = req.body;
         const mappings = await client.indices.getMapping({ index });
         return res.ok({
@@ -105,12 +125,7 @@ export function registerGeospatialRoutes(router: IRouter) {
           },
         });
       } catch (err: any) {
-        return res.ok({
-          body: {
-            ok: false,
-            resp: err.message,
-          },
-        });
+        return handleOpenSearchError(err, res);
       }
     }
   );

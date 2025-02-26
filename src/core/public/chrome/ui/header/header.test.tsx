@@ -28,14 +28,18 @@
  * under the License.
  */
 
+import { EuiHeaderSectionItemButton } from '@elastic/eui';
 import React from 'react';
 import { act } from 'react-dom/test-utils';
 import { BehaviorSubject } from 'rxjs';
 import { mountWithIntl } from 'test_utils/enzyme_helpers';
-import { httpServiceMock } from '../../../http/http_service.mock';
-import { applicationServiceMock } from '../../../mocks';
-import { Header } from './header';
 import { StubBrowserStorage } from 'test_utils/stub_browser_storage';
+import { httpServiceMock } from '../../../http/http_service.mock';
+import { applicationServiceMock, chromeServiceMock } from '../../../mocks';
+import { ISidecarConfig, SIDECAR_DOCKED_MODE } from '../../../overlays';
+import { WorkspaceObject } from 'src/core/public/workspace';
+import { HeaderVariant } from '../../constants';
+import { Header } from './header';
 
 jest.mock('@elastic/eui/lib/services/accessibility/html_id_generator', () => ({
   htmlIdGenerator: () => () => 'mockId',
@@ -46,13 +50,16 @@ function mockProps() {
   const application = applicationServiceMock.createInternalStartContract();
 
   return {
+    http,
     application,
     opensearchDashboardsVersion: '1.0.0',
     appTitle$: new BehaviorSubject('test'),
     badge$: new BehaviorSubject(undefined),
     breadcrumbs$: new BehaviorSubject([]),
+    breadcrumbsEnricher$: new BehaviorSubject(undefined),
     homeHref: '/',
     isVisible$: new BehaviorSubject(true),
+    headerVariant$: new BehaviorSubject(undefined),
     opensearchDashboardsDocLink: '/docs',
     navLinks$: new BehaviorSubject([]),
     customNavLink$: new BehaviorSubject(undefined),
@@ -65,17 +72,26 @@ function mockProps() {
     navControlsRight$: new BehaviorSubject([]),
     navControlsExpandedCenter$: new BehaviorSubject([]),
     navControlsExpandedRight$: new BehaviorSubject([]),
+    navControlsPrimaryHeaderRight$: new BehaviorSubject([]),
     basePath: http.basePath,
     isLocked$: new BehaviorSubject(false),
     loadingCount$: new BehaviorSubject(0),
     onIsLockedUpdate: () => {},
-    branding: {
-      darkMode: false,
-      logo: { defaultUrl: '/' },
-      mark: { defaultUrl: '/' },
-      applicationTitle: 'OpenSearch Dashboards',
-    },
+    branding: {},
     survey: '/',
+    logos: chromeServiceMock.createStartContract().logos,
+    sidecarConfig$: new BehaviorSubject<ISidecarConfig>({
+      dockedMode: SIDECAR_DOCKED_MODE.RIGHT,
+      paddingSize: 640,
+    }),
+    navGroupEnabled: false,
+    currentNavGroup$: new BehaviorSubject(undefined),
+    navGroupsMap$: new BehaviorSubject({}),
+    navControlsLeftBottom$: new BehaviorSubject([]),
+    setCurrentNavGroup: jest.fn(() => {}),
+    workspaceList$: new BehaviorSubject([]),
+    currentWorkspace$: new BehaviorSubject<WorkspaceObject | null>(null),
+    useUpdatedHeader: false,
   };
 }
 
@@ -102,17 +118,17 @@ describe('Header', () => {
     const recentlyAccessed$ = new BehaviorSubject([
       { link: '', label: 'dashboard', id: 'dashboard' },
     ]);
-    const component = mountWithIntl(
-      <Header
-        {...mockProps()}
-        isVisible$={isVisible$}
-        breadcrumbs$={breadcrumbs$}
-        navLinks$={navLinks$}
-        recentlyAccessed$={recentlyAccessed$}
-        isLocked$={isLocked$}
-        customNavLink$={customNavLink$}
-      />
-    );
+    const props = {
+      ...mockProps(),
+      isVisible$,
+      breadcrumbs$,
+      navLinks$,
+      recentlyAccessed$,
+      isLocked$,
+      customNavLink$,
+    };
+
+    const component = mountWithIntl(<Header {...props} />);
     expect(component.find('EuiHeader').exists()).toBeFalsy();
     expect(component.find('EuiProgress').exists()).toBeTruthy();
 
@@ -120,7 +136,6 @@ describe('Header', () => {
     component.update();
     expect(component.find('EuiHeader.primaryHeader').exists()).toBeTruthy();
     expect(component.find('EuiHeader.expandedHeader').exists()).toBeTruthy();
-    expect(component.find('HeaderLogo').exists()).toBeTruthy();
     expect(component.find('HeaderNavControls')).toHaveLength(5);
     expect(component.find('[data-test-subj="toggleNavButton"]').exists()).toBeTruthy();
     expect(component.find('HomeLoader').exists()).toBeTruthy();
@@ -131,6 +146,11 @@ describe('Header', () => {
 
     expect(component.find('EuiFlyout[aria-label="Primary"]').exists()).toBeFalsy();
 
+    const headerLogo = component.find('HeaderLogo');
+    expect(headerLogo.exists()).toBeTruthy();
+    expect(headerLogo.prop('backgroundColorScheme')).toEqual('dark');
+    expect(headerLogo.prop('logos')).toEqual(props.logos);
+
     act(() => isLocked$.next(true));
     component.update();
     expect(component.find('EuiFlyout[aria-label="Primary"]').exists()).toBeTruthy();
@@ -139,16 +159,13 @@ describe('Header', () => {
 
   it('renders condensed header', () => {
     const branding = {
-      darkMode: false,
-      logo: { defaultUrl: '/foo' },
-      mark: { defaultUrl: '/foo' },
-      applicationTitle: 'Foobar Dashboards',
       useExpandedHeader: false,
     };
     const props = {
       ...mockProps(),
       branding,
     };
+
     const component = mountWithIntl(<Header {...props} />);
 
     expect(component.find('EuiHeader.primaryHeader').exists()).toBeTruthy();
@@ -163,5 +180,97 @@ describe('Header', () => {
     expect(component.find('HeaderHelpMenuUI').exists()).toBeTruthy();
 
     expect(component).toMatchSnapshot();
+  });
+
+  it('renders new header when feature flag is turned on', () => {
+    const branding = {
+      useExpandedHeader: false,
+    };
+    const props = {
+      ...mockProps(),
+      branding,
+    };
+
+    const component = mountWithIntl(<Header {...props} navGroupEnabled />);
+
+    expect(component.find('CollapsibleNavGroupEnabled').exists()).toBeTruthy();
+  });
+
+  it('toggles primary navigation menu when clicked', () => {
+    const branding = {
+      useExpandedHeader: false,
+    };
+    const props = {
+      ...mockProps(),
+      branding,
+    };
+    const component = mountWithIntl(<Header {...props} />);
+    component.find(EuiHeaderSectionItemButton).first().simulate('click');
+    expect(component).toMatchSnapshot();
+  });
+
+  it('renders page header with application title', () => {
+    const branding = {
+      useExpandedHeader: false,
+    };
+    const useUpdatedHeader = true;
+    const breadcrumbs$ = new BehaviorSubject([{ text: 'test' }, { text: 'testTitle' }]);
+    const props = {
+      ...mockProps(),
+      breadcrumbs$,
+      branding,
+      useUpdatedHeader,
+    };
+    const component = mountWithIntl(<Header {...props} />);
+    expect(component.find('[data-test-subj="headerApplicationTitle"]').exists()).toBeTruthy();
+    expect(component.find('[data-test-subj="breadcrumb first"]').exists()).toBeTruthy();
+    expect(component.find('[data-test-subj="headerBadgeControl"]').exists()).toBeFalsy();
+    expect(component.find('HeaderBadge').exists()).toBeFalsy();
+    expect(component.find('[data-test-subj="headerLeftControl"]').exists()).toBeFalsy();
+    expect(component.find('HeaderNavControls')).toHaveLength(1);
+    expect(component.find('[data-test-subj="headerCenterControl"]').exists()).toBeFalsy();
+    expect(component.find('[data-test-subj="headerRightControl"]').exists()).toBeFalsy();
+    expect(component.find('HeaderActionMenu').exists()).toBeFalsy();
+    expect(component.find('[data-test-subj="headerDescriptionControl"]').exists()).toBeTruthy();
+    expect(component.find('[data-test-subj="headerBottomControl"]').exists()).toBeTruthy();
+    expect(component).toMatchSnapshot();
+  });
+
+  it('renders application header without title and breadcrumbs', () => {
+    const branding = {
+      useExpandedHeader: false,
+    };
+    const useUpdatedHeader = true;
+    const headerVariant$ = new BehaviorSubject(HeaderVariant.APPLICATION);
+    const breadcrumbs$ = new BehaviorSubject([{ text: 'test' }, { text: 'testTitle' }]);
+    const props = {
+      ...mockProps(),
+      breadcrumbs$,
+      branding,
+      useUpdatedHeader,
+      headerVariant$,
+    };
+    const component = mountWithIntl(<Header {...props} />);
+    expect(component.find('[data-test-subj="headerApplicationTitle"]').exists()).toBeFalsy();
+    expect(component.find('[data-test-subj="breadcrumb first"]').exists()).toBeFalsy();
+    expect(component.find('HeaderActionMenu').exists()).toBeFalsy();
+    expect(component.find('RecentItems').exists()).toBeTruthy();
+    expect(component.find('[data-test-subj="headerRightControl"]').exists()).toBeFalsy();
+    expect(component).toMatchSnapshot();
+  });
+
+  it('should remember the collapse state when new nav is enabled', () => {
+    const branding = {
+      useExpandedHeader: false,
+    };
+    const props = {
+      ...mockProps(),
+      branding,
+      useUpdatedHeader: true,
+      onIsLockedUpdate: jest.fn(),
+    };
+    const component = mountWithIntl(<Header {...props} />);
+    component.find(EuiHeaderSectionItemButton).first().simulate('click');
+    expect(props.onIsLockedUpdate).toBeCalledWith(true);
   });
 });

@@ -3,8 +3,18 @@
   "version": "opensearchDashboards",
   "server": true,
   "ui": true,
-  "requiredPlugins": ["management", "data"],
-  "optionalPlugins": ["dashboard", "visualizations", "discover", "home", "visBuilder"],
+  "requiredPlugins": ["management", "data", "uiActions","navigation"],
+  "optionalPlugins": [
+    "dashboard",
+    "visualizations",
+    "discover",
+    "home",
+    "visBuilder",
+    "visAugmenter",
+    "dataSource",
+    "dataSourceManagement",
+    "contentManagement"
+  ],
   "extraPublicDirs": ["public/lib"],
-  "requiredBundles": ["opensearchDashboardsReact", "home"]
+  "requiredBundles": ["opensearchDashboardsReact", "home", "contentManagement"]
 }

@@ -29,7 +29,7 @@
  */
 
 import { schema } from '@osd/config-schema';
-import { IRouter } from 'src/core/server';
+import { IRouter, SavedObjectsFindOptions } from 'src/core/server';
 import { DataSourceAttributes } from 'src/plugins/data_source/common/data_sources';
 import { getIndexPatternTitle } from '../../../data/common/index_patterns/utils';
 import { injectMetaAttributes } from '../lib';
@@ -55,6 +55,7 @@ export const registerFindRoute = (
             defaultValue: 'OR',
           }),
           sortField: schema.maybe(schema.string()),
+          sortOrder: schema.maybe(schema.string()),
           hasReference: schema.maybe(
             schema.object({
               type: schema.string(),
@@ -64,6 +65,9 @@ export const registerFindRoute = (
           fields: schema.oneOf([schema.string(), schema.arrayOf(schema.string())], {
             defaultValue: [],
           }),
+          workspaces: schema.maybe(
+            schema.oneOf([schema.string(), schema.arrayOf(schema.string())])
+          ),
         }),
       },
     },
@@ -90,11 +94,14 @@ export const registerFindRoute = (
         return await client.get<DataSourceAttributes>('data-source', id);
       };
 
-      const findResponse = await client.find<any>({
+      const findOptions = {
         ...req.query,
         fields: undefined,
         searchFields: [...searchFields],
-      });
+        workspaces: req.query.workspaces ? Array<string>().concat(req.query.workspaces) : undefined,
+      } as SavedObjectsFindOptions;
+
+      const findResponse = await client.find<any>(findOptions);
 
       const savedObjects = await Promise.all(
         findResponse.saved_objects.map(async (obj) => {

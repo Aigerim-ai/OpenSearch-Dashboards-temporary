@@ -9,11 +9,18 @@ export interface DataSourceAttributes extends SavedObjectAttributes {
   title: string;
   description?: string;
   endpoint: string;
+  dataSourceVersion: string;
+  dataSourceEngineType?: DataSourceEngineType;
+  installedPlugins?: string[];
   auth: {
-    type: AuthType;
-    credentials: UsernamePasswordTypedContent | SigV4Content | undefined;
+    type: AuthType | string;
+    credentials: UsernamePasswordTypedContent | SigV4Content | undefined | AuthTypeContent;
   };
   lastUpdatedTime?: string;
+}
+
+export interface AuthTypeContent {
+  [key: string]: string;
 }
 
 /**
@@ -25,6 +32,8 @@ export interface SigV4Content extends SavedObjectAttributes {
   accessKey: string;
   secretKey: string;
   region: string;
+  service?: SigV4ServiceName;
+  sessionToken?: string;
 }
 
 export interface UsernamePasswordTypedContent extends SavedObjectAttributes {
@@ -36,4 +45,19 @@ export enum AuthType {
   NoAuth = 'no_auth',
   UsernamePasswordType = 'username_password',
   SigV4 = 'sigv4',
+}
+
+// src/plugins/workspace/public/utils.ts Workspace plugin depends on this to do use case limitation.
+export enum SigV4ServiceName {
+  OpenSearch = 'es',
+  OpenSearchServerless = 'aoss',
+}
+
+export { DataSourceError } from './error';
+
+export enum DataSourceEngineType {
+  OpenSearch = 'OpenSearch',
+  OpenSearchServerless = 'OpenSearch Serverless',
+  Elasticsearch = 'Elasticsearch',
+  NA = 'No Engine Type Available',
 }

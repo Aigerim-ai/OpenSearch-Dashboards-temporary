@@ -5,6 +5,7 @@
 
 import { i18n } from '@osd/i18n';
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { SavedObject } from '../../../../../saved_objects/public';
 import {
   InvalidJSONProperty,
@@ -14,16 +15,15 @@ import {
 import { EDIT_PATH, PLUGIN_ID } from '../../../../common';
 import { VisBuilderServices } from '../../../types';
 import { getCreateBreadcrumbs, getEditBreadcrumbs } from '../breadcrumbs';
-import { getSavedVisBuilderVis } from '../get_saved_vis_builder_vis';
 import {
   useTypedDispatch,
   setStyleState,
   setVisualizationState,
-  VisualizationState,
+  setUIStateState,
 } from '../state_management';
 import { useOpenSearchDashboards } from '../../../../../opensearch_dashboards_react/public';
 import { setEditorState } from '../state_management/metadata_slice';
-import { validateVisBuilderState } from '../validations/vis_builder_state_validation';
+import { getStateFromSavedObject } from '../../../saved_visualizations/transforms';
 
 // This function can be used when instantiating a saved vis or creating a new one
 // using url parameters, embedding and destroying it in DOM
@@ -31,18 +31,21 @@ export const useSavedVisBuilderVis = (visualizationIdFromUrl: string | undefined
   const { services } = useOpenSearchDashboards<VisBuilderServices>();
   const [savedVisState, setSavedVisState] = useState<SavedObject | undefined>(undefined);
   const dispatch = useTypedDispatch();
+  const isMigrated = useSelector((state: any) => state.metadata?.isMigrated);
 
   useEffect(() => {
     const {
       application: { navigateToApp },
       chrome,
+      data,
       history,
       http: { basePath },
       toastNotifications,
+      savedVisBuilderLoader,
     } = services;
     const toastNotification = (message: string) => {
       toastNotifications.addDanger({
-        title: i18n.translate('visualize.createVisualization.failedToLoadErrorMessage', {
+        title: i18n.translate('visBuilder.createVisualization.failedToLoadErrorMessage', {
           defaultMessage: 'Failed to load the visualization',
         }),
         text: message,
@@ -51,40 +54,50 @@ export const useSavedVisBuilderVis = (visualizationIdFromUrl: string | undefined
 
     const loadSavedVisBuilderVis = async () => {
       try {
-        const savedVisBuilderVis = await getSavedVisBuilderVis(services, visualizationIdFromUrl);
+        dispatch(setEditorState({ state: 'loading' }));
+        const savedVisBuilderVis = await getSavedVisBuilderVis(
+          savedVisBuilderLoader,
+          visualizationIdFromUrl
+        );
 
         if (savedVisBuilderVis.id) {
-          chrome.setBreadcrumbs(getEditBreadcrumbs(savedVisBuilderVis.title, navigateToApp));
-          chrome.docTitle.change(savedVisBuilderVis.title);
+          const { title, state } = getStateFromSavedObject(savedVisBuilderVis);
+
+          // Use isMigrated to determine which breadcrumb function to use
+          const breadcrumbs = isMigrated
+            ? getCreateBreadcrumbs(navigateToApp, isMigrated)
+            : getEditBreadcrumbs(title, navigateToApp);
+
+          chrome.setBreadcrumbs(breadcrumbs);
+
+          // Change the title based on isMigrated
+          const newTitle = isMigrated ? 'New Visualization' : title;
+          chrome.docTitle.change(newTitle);
+          // sync initial app filters from savedObject to filterManager
+          const filters = savedVisBuilderVis.searchSourceFields.filter;
+          const query =
+            savedVisBuilderVis.searchSourceFields.query || data.query.queryString.getDefaultQuery();
+          const actualFilters = [];
+          const tempFilters = typeof filters === 'function' ? filters() : filters;
+          (Array.isArray(tempFilters) ? tempFilters : [tempFilters]).forEach((filter) => {
+            if (filter) actualFilters.push(filter);
+          });
+          data.query.filterManager.setAppFilters(actualFilters);
+          data.query.queryString.setQuery(query);
+
+          chrome.recentlyAccessed.add(
+            savedVisBuilderVis.getFullPath(),
+            title,
+            savedVisBuilderVis.id,
+            { type: savedVisBuilderVis.getOpenSearchType() }
+          );
+
+          dispatch(setUIStateState(state.ui));
+          dispatch(setStyleState(state.style));
+          dispatch(setVisualizationState(state.visualization));
+          dispatch(setEditorState({ state: 'loaded' }));
         } else {
-          chrome.setBreadcrumbs(getCreateBreadcrumbs(navigateToApp));
-        }
-
-        if (
-          savedVisBuilderVis.styleState !== '{}' &&
-          savedVisBuilderVis.visualizationState !== '{}'
-        ) {
-          const styleState = JSON.parse(savedVisBuilderVis.styleState);
-          const vizStateWithoutIndex = JSON.parse(savedVisBuilderVis.visualizationState);
-          const visualizationState: VisualizationState = {
-            searchField: vizStateWithoutIndex.searchField,
-            activeVisualization: vizStateWithoutIndex.activeVisualization,
-            indexPattern: savedVisBuilderVis.searchSourceFields.index,
-          };
-
-          const validateResult = validateVisBuilderState({ styleState, visualizationState });
-          if (!validateResult.valid) {
-            throw new InvalidJSONProperty(
-              validateResult.errorMsg ||
-                i18n.translate('visBuilder.useSavedVisBuilderVis.genericJSONError', {
-                  defaultMessage:
-                    'Something went wrong while loading your saved object. The object may be corrupted or does not match the latest schema',
-                })
-            );
-          }
-
-          dispatch(setStyleState(styleState));
-          dispatch(setVisualizationState(visualizationState));
+          chrome.setBreadcrumbs(getCreateBreadcrumbs(navigateToApp, isMigrated));
         }
 
         setSavedVisState(savedVisBuilderVis);
@@ -119,7 +132,16 @@ export const useSavedVisBuilderVis = (visualizationIdFromUrl: string | undefined
     };
 
     loadSavedVisBuilderVis();
-  }, [dispatch, services, visualizationIdFromUrl]);
+  }, [dispatch, services, visualizationIdFromUrl, isMigrated]);
 
   return savedVisState;
 };
+
+async function getSavedVisBuilderVis(
+  savedVisBuilderLoader: VisBuilderServices['savedVisBuilderLoader'],
+  visBuilderVisId?: string
+) {
+  const savedVisBuilderVis = await savedVisBuilderLoader.get(visBuilderVisId);
+
+  return savedVisBuilderVis;
+}

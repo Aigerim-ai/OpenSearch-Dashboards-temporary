@@ -83,6 +83,10 @@ interface Props {
   SavedObjectFinder: React.ComponentType<any>;
   stateTransfer?: EmbeddableStateTransfer;
   hideHeader?: boolean;
+  // TODO: the below hasBorder and hasShadow fields may be removed as part of
+  // https://github.com/opensearch-project/OpenSearch-Dashboards/issues/4483
+  hasBorder?: boolean;
+  hasShadow?: boolean;
 }
 
 interface State {
@@ -90,6 +94,7 @@ interface State {
   focusedPanelIndex?: string;
   viewMode: ViewMode;
   hidePanelTitle: boolean;
+  hidePanelAction: boolean;
   closeContextMenu: boolean;
   badges: Array<Action<EmbeddableContext>>;
   notifications: Array<Action<EmbeddableContext>>;
@@ -108,15 +113,19 @@ export class EmbeddablePanel extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
     const { embeddable } = this.props;
-    const viewMode = embeddable.getInput().viewMode ?? ViewMode.EDIT;
-    const hidePanelTitle =
-      Boolean(embeddable.parent?.getInput()?.hidePanelTitles) ||
-      Boolean(embeddable.getInput()?.hidePanelTitles);
+    const input = embeddable.getInput();
+    const parentInput = embeddable.parent?.getInput();
+
+    const viewMode = input?.viewMode ?? ViewMode.EDIT;
+    const hidePanelTitle = Boolean(parentInput?.hidePanelTitles) || Boolean(input?.hidePanelTitles);
+    const hidePanelAction =
+      Boolean(parentInput?.hidePanelActions) || Boolean(input?.hidePanelActions);
 
     this.state = {
       panels: [],
       viewMode,
       hidePanelTitle,
+      hidePanelAction,
       closeContextMenu: false,
       badges: [],
       notifications: [],
@@ -178,10 +187,15 @@ export class EmbeddablePanel extends React.Component<Props, State> {
     if (parent) {
       this.parentSubscription = parent.getInput$().subscribe(async () => {
         if (this.mounted && parent) {
+          const input = embeddable.getInput();
+          const parentInput = parent.getInput();
           this.setState({
             hidePanelTitle:
-              Boolean(embeddable.parent?.getInput()?.hidePanelTitles) ||
-              Boolean(embeddable.getInput()?.hidePanelTitles),
+              Boolean(parentInput?.hidePanelTitles) || Boolean(input?.hidePanelTitles),
+          });
+          this.setState({
+            hidePanelAction:
+              Boolean(parentInput?.hidePanelActions) || Boolean(input?.hidePanelActions),
           });
 
           this.refreshBadges();
@@ -234,11 +248,14 @@ export class EmbeddablePanel extends React.Component<Props, State> {
         paddingSize="none"
         role="figure"
         aria-labelledby={headerId}
+        hasBorder={this.props.hasBorder}
+        hasShadow={this.props.hasShadow}
       >
         {!this.props.hideHeader && (
           <PanelHeader
             getActionContextMenuPanel={this.getActionContextMenuPanel}
             hidePanelTitle={this.state.hidePanelTitle}
+            hidePanelAction={this.state.hidePanelAction}
             isViewMode={viewOnlyMode}
             closeContextMenu={this.state.closeContextMenu}
             title={title}

@@ -62,7 +62,8 @@ function flattenHit(indexPattern: IndexPattern, hit: Record<string, any>, deep: 
 
       if (hasValidMapping || isValue) {
         if (!flat[key]) {
-          flat[key] = val;
+          // Create a new array to avoid modifying the original array when pushing elements
+          flat[key] = Array.isArray(val) ? [...val] : val;
         } else if (Array.isArray(flat[key])) {
           flat[key].push(val);
         } else {
@@ -112,7 +113,7 @@ export function flattenHitWrapper(
   metaFields = {},
   cache = new WeakMap()
 ) {
-  return function cachedFlatten(hit: Record<string, any>, deep = false) {
+  return function cachedFlatten(hit: Record<string, any>, deep = true) {
     const decorateFlattened = decorateFlattenedWrapper(hit, metaFields);
     const cached = cache.get(hit);
     const flattened = cached || flattenHit(indexPattern, hit, deep);

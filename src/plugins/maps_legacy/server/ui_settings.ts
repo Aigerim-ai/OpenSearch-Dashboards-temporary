@@ -49,7 +49,7 @@ export function getUiSettings(): Record<string, UiSettingsParams<unknown>> {
             'maps_legacy.advancedSettings.visualization.tileMap.maxPrecision.cellDimensionsLinkText',
           values: {
             cellDimensionsLink:
-              `<a href="https://opensearch.org/docs/latest/dashboards/maptiles"
+              `<a href="https://opensearch.org/docs/latest/aggregations/bucket/geohash-grid/"
             target="_blank" rel="noopener noreferrer">` +
               i18n.translate(
                 'maps_legacy.advancedSettings.visualization.tileMap.maxPrecision.cellDimensionsLinkText',
@@ -95,7 +95,7 @@ export function getUiSettings(): Record<string, UiSettingsParams<unknown>> {
             'maps_legacy.advancedSettings.visualization.tileMap.wmsDefaults.propertiesLinkText',
           values: {
             propertiesLink:
-              '<a href="http://leafletjs.com/reference.html#tilelayer-wms" target="_blank" rel="noopener noreferrer">' +
+              '<a href="https://leafletjs.com/reference.html#tilelayer-wms" target="_blank" rel="noopener noreferrer">' +
               i18n.translate(
                 'maps_legacy.advancedSettings.visualization.tileMap.wmsDefaults.propertiesLinkText',
                 {

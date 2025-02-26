@@ -50,8 +50,13 @@ import { environmentServiceMock } from './environment/environment_service.mock';
 import { statusServiceMock } from './status/status_service.mock';
 import { auditTrailServiceMock } from './audit_trail/audit_trail_service.mock';
 import { coreUsageDataServiceMock } from './core_usage_data/core_usage_data_service.mock';
+import { securityServiceMock } from './security/security_service.mock';
+import { crossCompatibilityServiceMock } from './cross_compatibility/cross_compatibility.mock';
+import { dynamicConfigServiceMock } from './config/dynamic_config_service.mock';
+import { workspaceServiceMock } from './workspace/mocks';
 
 export { configServiceMock } from './config/mocks';
+export { dynamicConfigServiceMock } from './config/mocks';
 export { httpServerMock } from './http/http_server.mocks';
 export { httpResourcesMock } from './http_resources/http_resources_service.mock';
 export { sessionStorageMock } from './http/cookie_session_storage.mocks';
@@ -69,13 +74,17 @@ export { statusServiceMock } from './status/status_service.mock';
 export { contextServiceMock } from './context/context_service.mock';
 export { capabilitiesServiceMock } from './capabilities/capabilities_service.mock';
 export { coreUsageDataServiceMock } from './core_usage_data/core_usage_data_service.mock';
+export { crossCompatibilityServiceMock } from './cross_compatibility/cross_compatibility.mock';
 
 export function pluginInitializerContextConfigMock<T>(config: T) {
   const globalConfig: SharedGlobalConfig = {
     opensearchDashboards: {
       index: '.opensearch_dashboards_tests',
+      configIndex: '.opensearch_dashboards_config_tests',
       autocompleteTerminateAfter: duration(100000),
       autocompleteTimeout: duration(1000),
+      dashboardAdmin: { groups: [], users: [] },
+      futureNavigation: false,
     },
     opensearch: {
       shardTimeout: duration('30s'),
@@ -85,6 +94,9 @@ export function pluginInitializerContextConfigMock<T>(config: T) {
     path: { data: '/tmp' },
     savedObjects: {
       maxImportPayloadBytes: new ByteSizeValue(26214400),
+      permission: {
+        enabled: true,
+      },
     },
   };
 
@@ -157,6 +169,9 @@ function createCoreSetupMock({
     getStartServices: jest
       .fn<Promise<[ReturnType<typeof createCoreStartMock>, object, any]>, []>()
       .mockResolvedValue([createCoreStartMock(), pluginStartDeps, pluginStartContract]),
+    security: securityServiceMock.createSetupContract(),
+    dynamicConfigService: dynamicConfigServiceMock.createSetupContract(),
+    workspace: workspaceServiceMock.createSetupContract(),
   };
 
   return mock;
@@ -172,6 +187,9 @@ function createCoreStartMock() {
     savedObjects: savedObjectsServiceMock.createStartContract(),
     uiSettings: uiSettingsServiceMock.createStartContract(),
     coreUsageData: coreUsageDataServiceMock.createStartContract(),
+    crossCompatibility: crossCompatibilityServiceMock.createStartContract(),
+    dynamicConfig: dynamicConfigServiceMock.createStartContract(),
+    workspace: workspaceServiceMock.createStartContract(),
   };
 
   return mock;
@@ -192,6 +210,9 @@ function createInternalCoreSetupMock() {
     auditTrail: auditTrailServiceMock.createSetupContract(),
     logging: loggingServiceMock.createInternalSetupContract(),
     metrics: metricsServiceMock.createInternalSetupContract(),
+    security: securityServiceMock.createSetupContract(),
+    dynamicConfig: dynamicConfigServiceMock.createInternalSetupContract(),
+    workspace: workspaceServiceMock.createInternalSetupContract(),
   };
   return setupDeps;
 }
@@ -206,6 +227,9 @@ function createInternalCoreStartMock() {
     uiSettings: uiSettingsServiceMock.createStartContract(),
     auditTrail: auditTrailServiceMock.createStartContract(),
     coreUsageData: coreUsageDataServiceMock.createStartContract(),
+    crossCompatibility: crossCompatibilityServiceMock.createStartContract(),
+    dynamicConfig: dynamicConfigServiceMock.createInternalStartContract(),
+    workspace: workspaceServiceMock.createInternalStartContract(),
   };
   return startDeps;
 }
@@ -226,6 +250,10 @@ function createCoreRequestHandlerContextMock() {
       client: uiSettingsServiceMock.createClient(),
     },
     auditor: auditTrailServiceMock.createAuditor(),
+    dynamicConfig: {
+      client: dynamicConfigServiceMock.createInternalStartContract().getClient(),
+      asyncLocalStore: dynamicConfigServiceMock.createInternalStartContract().getAsyncLocalStore(),
+    },
   };
 }
 

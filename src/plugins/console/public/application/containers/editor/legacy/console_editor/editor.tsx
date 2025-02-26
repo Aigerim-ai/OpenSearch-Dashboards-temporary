@@ -228,10 +228,18 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
     });
   }, [sendCurrentRequestToOpenSearch, openDocumentation]);
 
+  const toolTipButtonDisabled = dataSourceId === undefined;
+  const sendLabel = toolTipButtonDisabled
+    ? i18n.translate('console.sendRequestButtonTooltip.withoutDataSourceId', {
+        defaultMessage: 'Select a data source',
+      })
+    : i18n.translate('console.sendRequestButtonTooltip', {
+        defaultMessage: 'Send request',
+      });
+
   return (
     <div style={abs} className="conApp">
       <div className="conApp__editor">
-        <ul className="conApp__autoComplete" id="autocomplete" />
         <EuiFlexGroup
           className="conApp__editorActions"
           id="ConAppEditorActions"
@@ -239,18 +247,13 @@ function EditorUI({ initialTextValue, dataSourceId }: EditorProps) {
           responsive={false}
         >
           <EuiFlexItem>
-            <EuiToolTip
-              content={i18n.translate('console.sendRequestButtonTooltip', {
-                defaultMessage: 'Click to send request',
-              })}
-            >
+            <EuiToolTip content={sendLabel}>
               <button
                 onClick={sendCurrentRequestToOpenSearch}
                 data-test-subj="sendRequestButton"
-                aria-label={i18n.translate('console.sendRequestButtonTooltip', {
-                  defaultMessage: 'Click to send request',
-                })}
+                aria-label={sendLabel}
                 className="conApp__editorActionButton conApp__editorActionButton--success"
+                disabled={toolTipButtonDisabled}
               >
                 <EuiIcon type="play" />
               </button>

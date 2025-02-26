@@ -11,12 +11,18 @@ import { useOpenSearchDashboards } from '../../../../opensearch_dashboards_react
 import {
   DataSourceAttributes,
   DataSourceManagementContext,
+  DataSourceManagementToastMessageItem,
   DataSourceTableItem,
-  ToastMessageItem,
 } from '../../types';
-import { getCreateBreadcrumbs } from '../breadcrumbs';
+import { getCreateOpenSearchDataSourceBreadcrumbs } from '../breadcrumbs';
 import { CreateDataSourceForm } from './components/create_form';
-import { createSingleDataSource, getDataSources, testConnection } from '../utils';
+import {
+  createSingleDataSource,
+  getDataSources,
+  testConnection,
+  fetchDataSourceMetaData,
+  handleSetDefaultDatasource,
+} from '../utils';
 import { LoadingMask } from '../loading_mask';
 
 type CreateDataSourceWizardProps = RouteComponentProps;
@@ -30,15 +36,19 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
     setBreadcrumbs,
     http,
     notifications: { toasts },
+    uiSettings,
+    navigation,
+    application,
   } = useOpenSearchDashboards<DataSourceManagementContext>().services;
 
   /* State Variables */
   const [existingDatasourceNamesList, setExistingDatasourceNamesList] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const useNewUX = uiSettings.get('home:useNewHomePage');
 
   /* Set breadcrumb */
   useEffectOnce(() => {
-    setBreadcrumbs(getCreateBreadcrumbs());
+    setBreadcrumbs(getCreateOpenSearchDataSourceBreadcrumbs(useNewUX));
     getExistingDataSourceNames();
   });
 
@@ -55,8 +65,9 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
       }
     } catch (e) {
       handleDisplayToastMessage({
-        id: 'dataSourcesManagement.createDataSource.existingDatasourceNames',
-        defaultMessage: 'Unable to fetch some resources.',
+        message: i18n.translate('dataSourcesManagement.createDataSource.existingDatasourceNames', {
+          defaultMessage: 'Unable to fetch some resources.',
+        }),
       });
       props.history.push('');
     } finally {
@@ -68,13 +79,21 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
   const handleSubmit = async (attributes: DataSourceAttributes) => {
     setIsLoading(true);
     try {
+      // Fetch data source metadata from added OS/ES domain/cluster
+      const metadata = await fetchDataSourceMetaData(http, attributes);
+      attributes.dataSourceVersion = metadata.dataSourceVersion;
+      attributes.dataSourceEngineType = metadata.dataSourceEngineType;
+      attributes.installedPlugins = metadata.installedPlugins;
       await createSingleDataSource(savedObjects.client, attributes);
+      // Set the first create data source as default data source.
+      await handleSetDefaultDatasource(savedObjects.client, uiSettings);
       props.history.push('');
     } catch (e) {
       setIsLoading(false);
       handleDisplayToastMessage({
-        id: 'dataSourcesManagement.createDataSource.createDataSourceFailMsg',
-        defaultMessage: 'Creation of the Data Source failed with some errors.',
+        message: i18n.translate('dataSourcesManagement.createDataSource.createDataSourceFailMsg', {
+          defaultMessage: 'Creation of the Data Source failed with some errors.',
+        }),
       });
     }
   };
@@ -85,27 +104,32 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
     try {
       await testConnection(http, attributes);
       handleDisplayToastMessage({
-        id: 'dataSourcesManagement.createDataSource.testConnectionSuccessMsg',
-        defaultMessage:
-          'Connecting to the endpoint using the provided authentication method was successful.',
+        message: i18n.translate('dataSourcesManagement.createDataSource.testConnectionSuccessMsg', {
+          defaultMessage:
+            'Connecting to the endpoint using the provided authentication method was successful.',
+        }),
         success: true,
       });
     } catch (e) {
       handleDisplayToastMessage({
-        id: 'dataSourcesManagement.createDataSource.testConnectionFailMsg',
-        defaultMessage:
-          'Failed Connecting to the endpoint using the provided authentication method.',
+        message: i18n.translate('dataSourcesManagement.createDataSource.testConnectionFailMsg', {
+          defaultMessage:
+            'Failed Connecting to the endpoint using the provided authentication method.',
+        }),
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDisplayToastMessage = ({ id, defaultMessage, success }: ToastMessageItem) => {
+  const handleDisplayToastMessage = ({
+    message,
+    success,
+  }: DataSourceManagementToastMessageItem) => {
     if (success) {
-      toasts.addSuccess(i18n.translate(id, { defaultMessage }));
+      toasts.addSuccess(message);
     } else {
-      toasts.addDanger(i18n.translate(id, { defaultMessage }));
+      toasts.addDanger(message);
     }
   };
 
@@ -114,8 +138,12 @@ export const CreateDataSourceWizard: React.FunctionComponent<CreateDataSourceWiz
     return (
       <>
         <CreateDataSourceForm
+          useNewUX={useNewUX}
+          navigation={navigation}
+          application={application}
           handleSubmit={handleSubmit}
           handleTestConnection={handleTestConnection}
+          handleCancel={() => props.history.push('/create')}
           existingDatasourceNamesList={existingDatasourceNamesList}
         />
         {isLoading ? <LoadingMask /> : null}

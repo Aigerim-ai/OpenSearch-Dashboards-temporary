@@ -31,6 +31,7 @@
 import React, { Fragment } from 'react';
 import { EuiTextColor } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
+import { stringify } from '@osd/std';
 import { existsOperator, isOneOfOperator } from './filter_operators';
 import { Filter, FILTERS } from '../../../../../common';
 import type { FilterLabelStatus } from '../../filter_item';
@@ -58,7 +59,11 @@ export default function FilterLabel({ filter, valueLabel, filterLabelStatus }: F
     );
 
   const getValue = (text?: string) => {
-    return <span className="globalFilterLabel__value">{text}</span>;
+    return (
+      <span className="globalFilterLabel__value" data-test-subj="globalFilterLabelValue">
+        {text}
+      </span>
+    );
   };
 
   if (filter.meta.alias !== null) {
@@ -119,7 +124,7 @@ export default function FilterLabel({ filter, valueLabel, filterLabelStatus }: F
       return (
         <Fragment>
           {prefix}
-          {getValue(`${JSON.stringify(filter.query) || filter.meta.value}`)}
+          {getValue(`${stringify(filter.query) || filter.meta.value}`)}
         </Fragment>
       );
   }

@@ -32,7 +32,7 @@ import { deepFreeze } from '@osd/std';
 import { parse } from 'semver';
 import { InjectedMetadataSetup } from '../injected_metadata';
 
-interface StartDeps {
+export interface StartDeps {
   injectedMetadata: InjectedMetadataSetup;
 }
 
@@ -388,6 +388,8 @@ export class DocLinksService {
           ganttCharts: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}gantt`,
           // https://opensearch.org/docs/latest/dashboards/reporting/
           reporting: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}reporting`,
+          // https://opensearch.org/docs/latest/dashboards/dev-tools/index-dev/
+          devTools: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}dev-tools/index-dev/`,
           notebooks: {
             // https://opensearch.org/docs/latest/dashboards/notebooks/
             base: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}notebooks`,
@@ -417,11 +419,28 @@ export class DocLinksService {
           dataSource: {
             // https://opensearch.org/docs/latest/dashboards/discover/multi-data-sources/
             guide: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}discover/multi-data-sources/`,
+            // https://opensearch.org/docs/latest/dashboards/management/S3-data-source/
+            s3DataSource: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}management/S3-data-source/`,
           },
           visualize: {
             // https://opensearch.org/docs/latest/dashboards/visualize/viz-index/
-            guide: `${OPENSEARCH_WEBSITE_DOCS}visualize/viz-index/`,
-            timelineDeprecation: `${OPENSEARCH_WEBSITE_DOCS}`,
+            guide: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}visualize/viz-index/`,
+          },
+          dashboards: {
+            // https://opensearch.org/docs/latest/dashboards/quickstart/
+            quickStart: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}quickstart/`,
+            // https://opensearch.org/docs/latest/dashboards/dashboard/index/
+            createDashboards: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}dashboard/index/`,
+          },
+          management: {
+            // https://opensearch.org/docs/latest/dashboards/management/advanced-settings/
+            advancedSettings: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}management/advanced-settings/`,
+          },
+          workspace: {
+            // https://opensearch.org/docs/latest/dashboards/workspace/workspace-acl/#defining-workspace-collaborators
+            collaborators: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}workspace/workspace-acl/#defining-workspace-collaborators`,
+            // https://opensearch.org/docs/latest/dashboards/workspace/workspace-acl/#configuring-workspace-privacy
+            privacy: `${OPENSEARCH_DASHBOARDS_VERSIONED_DOCS}workspace/workspace-acl/#configuring-workspace-privacy`,
           },
         },
         noDocumentation: {
@@ -571,7 +590,6 @@ export class DocLinksService {
           reIndex: {
             rethrottle: `${OPENSEARCH_WEBSITE_DOCS}`,
           },
-          timelineDeprecation: `${OPENSEARCH_WEBSITE_DOCS}`,
           apmServer: `${OPENSEARCH_WEBSITE_DOCS}`,
           tutorial: {
             loadDataTutorial: `${OPENSEARCH_WEBSITE_DOCS}`,
@@ -607,6 +625,22 @@ export class DocLinksService {
             cleanup: `${OPENSEARCH_WEBSITE_DOCS}`,
             // https://opensearch.org/docs/latest/api-reference/snapshots/verify-snapshot-repository/
             veirfyRepository: `${OPENSEARCH_WEBSITE_DOCS}/api-reference/snapshots/verify-snapshot-repository/`,
+          },
+          lucene: {
+            // https://opensearch.org/docs/latest/query-dsl/full-text/query-string/
+            base: `${OPENSEARCH_WEBSITE_DOCS}/query-dsl/full-text/query-string/`,
+          },
+          ppl: {
+            // https://opensearch.org/docs/latest/search-plugins/sql/ppl/syntax/
+            base: `${OPENSEARCH_WEBSITE_DOCS}/search-plugins/sql/ppl/syntax/`,
+          },
+          sql: {
+            // https://opensearch.org/docs/latest/search-plugins/sql/sql/basic/
+            base: `${OPENSEARCH_WEBSITE_DOCS}/search-plugins/sql/sql/basic/`,
+          },
+          sqlPplLimitation: {
+            // https://opensearch.org/docs/latest/search-plugins/sql/limitation/
+            base: `${OPENSEARCH_WEBSITE_DOCS}/search-plugins/sql/limitation/`,
           },
         },
       },
@@ -817,8 +851,12 @@ export interface DocLinksStart {
       readonly browser: string;
       readonly dataSource: {
         readonly guide: string;
+        readonly s3DataSource: string;
       };
       readonly visualize: Record<string, string>;
+      readonly dashboards: Record<string, string>;
+      readonly management: Record<string, string>;
+      readonly workspace: Record<string, string>;
     };
     readonly noDocumentation: {
       readonly auditbeat: string;
@@ -919,7 +957,6 @@ export interface DocLinksStart {
       readonly reIndex: {
         readonly rethrottle: string;
       };
-      readonly timelineDeprecation: string;
       readonly apmServer: string;
       readonly tutorial: {
         readonly loadDataTutorial: string;
@@ -947,6 +984,18 @@ export interface DocLinksStart {
         readonly deleteRepository: string;
         readonly cleanup: string;
         readonly veirfyRepository: string;
+      };
+      readonly lucene: {
+        readonly base: string;
+      };
+      readonly sql: {
+        readonly base: string;
+      };
+      readonly ppl: {
+        readonly base: string;
+      };
+      readonly sqlPplLimitation: {
+        readonly base: string;
       };
     };
   };

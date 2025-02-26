@@ -111,6 +111,7 @@ export function createPluginSetupContext<
       registerMountContext: (contextName, provider) =>
         deps.application.registerMountContext(plugin.opaqueId, contextName, provider),
     },
+    chrome: deps.chrome,
     context: deps.context,
     fatalErrors: deps.fatalErrors,
     http: deps.http,
@@ -121,6 +122,7 @@ export function createPluginSetupContext<
       getBranding: deps.injectedMetadata.getBranding,
     },
     getStartServices: () => plugin.startDependencies,
+    workspaces: deps.workspaces,
   };
 }
 
@@ -152,6 +154,12 @@ export function createPluginStartContext<
       navigateToApp: deps.application.navigateToApp,
       navigateToUrl: deps.application.navigateToUrl,
       getUrlForApp: deps.application.getUrlForApp,
+      setAppLeftControls: deps.application.setAppLeftControls,
+      setAppCenterControls: deps.application.setAppCenterControls,
+      setAppRightControls: deps.application.setAppRightControls,
+      setAppBadgeControls: deps.application.setAppBadgeControls,
+      setAppDescriptionControls: deps.application.setAppDescriptionControls,
+      setAppBottomControls: deps.application.setAppBottomControls,
       registerMountContext: (contextName, provider) =>
         deps.application.registerMountContext(plugin.opaqueId, contextName, provider),
     },
@@ -168,5 +176,6 @@ export function createPluginStartContext<
       getBranding: deps.injectedMetadata.getBranding,
     },
     fatalErrors: deps.fatalErrors,
+    workspaces: deps.workspaces,
   };
 }

@@ -31,8 +31,10 @@
 import { SearchResponse } from 'elasticsearch';
 import { Search } from '@opensearch-project/opensearch/api/requestParams';
 import { IOpenSearchDashboardsSearchRequest, IOpenSearchDashboardsSearchResponse } from '../types';
+import { OSD_FIELD_TYPES } from '../../types';
 
 export const OPENSEARCH_SEARCH_STRATEGY = 'opensearch';
+export const OPENSEARCH_SEARCH_WITH_LONG_NUMERALS_STRATEGY = 'opensearch-with-long-numerals';
 
 export interface ISearchOptions {
   /**
@@ -43,6 +45,14 @@ export interface ISearchOptions {
    * Use this option to force using a specific server side search strategy. Leave empty to use the default strategy.
    */
   strategy?: string;
+  /**
+   * Use this option to enable support for long numerals.
+   */
+  withLongNumeralsSupport?: boolean;
+  /**
+   * Use this option to format the fields in the search response.
+   */
+  formatter?: (value: any, type: OSD_FIELD_TYPES) => any;
 }
 
 export type ISearchRequestParams<T = Record<string, any>> = {
@@ -52,6 +62,7 @@ export type ISearchRequestParams<T = Record<string, any>> = {
 export interface IOpenSearchSearchRequest
   extends IOpenSearchDashboardsSearchRequest<ISearchRequestParams> {
   indexType?: string;
+  language?: string;
   dataSourceId?: string;
 }
 

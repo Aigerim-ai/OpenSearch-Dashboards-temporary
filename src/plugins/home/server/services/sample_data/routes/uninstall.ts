@@ -31,8 +31,10 @@
 import { schema } from '@osd/config-schema';
 import _ from 'lodash';
 import { IRouter } from 'src/core/server';
-import { SampleDatasetSchema } from '../lib/sample_dataset_registry_types';
+import { getWorkspaceState } from '../../../../../../core/server/utils';
+import { getFinalSavedObjects } from '../data_sets/util';
 import { createIndexName } from '../lib/create_index_name';
+import { SampleDatasetSchema } from '../lib/sample_dataset_registry_types';
 import { SampleDataUsageTracker } from '../usage/usage';
 
 export function createUninstallRoute(
@@ -45,46 +47,33 @@ export function createUninstallRoute(
       path: '/api/sample_data/{id}',
       validate: {
         params: schema.object({ id: schema.string() }),
+        query: schema.object({
+          data_source_id: schema.maybe(schema.string()),
+        }),
       },
     },
-    async (
-      {
-        core: {
-          opensearch: {
-            legacy: {
-              client: { callAsCurrentUser },
-            },
-          },
-          savedObjects: { client: savedObjectsClient },
-        },
-      },
-      request,
-      response
-    ) => {
+    async (context, request, response) => {
       const sampleDataset = sampleDatasets.find(({ id }) => id === request.params.id);
+      const dataSourceId = request.query.data_source_id;
+      const workspaceState = getWorkspaceState(request);
+      const workspaceId = workspaceState?.requestWorkspaceId;
 
       if (!sampleDataset) {
         return response.notFound();
       }
 
-      for (let i = 0; i < sampleDataset.dataIndices.length; i++) {
-        const dataIndexConfig = sampleDataset.dataIndices[i];
-        const index = createIndexName(sampleDataset.id, dataIndexConfig.id);
+      /**
+       * Delete saved objects before removing the data index to avoid partial deletion
+       * of sample data when a read-only workspace user attempts to remove sample data.
+       */
+      const savedObjectsList = getFinalSavedObjects({
+        dataset: sampleDataset,
+        workspaceId,
+        dataSourceId,
+      });
 
-        try {
-          await callAsCurrentUser('indices.delete', { index });
-        } catch (err) {
-          return response.customError({
-            statusCode: err.status,
-            body: {
-              message: `Unable to delete sample data index "${index}", error: ${err.message}`,
-            },
-          });
-        }
-      }
-
-      const deletePromises = sampleDataset.savedObjects.map(({ type, id }) =>
-        savedObjectsClient.delete(type, id)
+      const deletePromises = savedObjectsList.map(({ type, id }) =>
+        context.core.savedObjects.client.delete(type, id)
       );
 
       try {
@@ -93,9 +82,30 @@ export function createUninstallRoute(
         // ignore 404s since users could have deleted some of the saved objects via the UI
         if (_.get(err, 'output.statusCode') !== 404) {
           return response.customError({
-            statusCode: err.status,
+            statusCode: err.status || _.get(err, 'output.statusCode'),
             body: {
               message: `Unable to delete sample dataset saved objects, error: ${err.message}`,
+            },
+          });
+        }
+      }
+
+      const caller = dataSourceId
+        ? context.dataSource.opensearch.legacy.getClient(dataSourceId).callAPI
+        : context.core.opensearch.legacy.client.callAsCurrentUser;
+
+      for (let i = 0; i < sampleDataset.dataIndices.length; i++) {
+        const dataIndexConfig = sampleDataset.dataIndices[i];
+        const index =
+          dataIndexConfig.indexName ?? createIndexName(sampleDataset.id, dataIndexConfig.id);
+
+        try {
+          await caller('indices.delete', { index });
+        } catch (err) {
+          return response.customError({
+            statusCode: err.status,
+            body: {
+              message: `Unable to delete sample data index "${index}", error: ${err.message}`,
             },
           });
         }

@@ -37,6 +37,7 @@ import { Env } from '../../config';
 import { getEnvOptions } from '../../config/mocks';
 import { CapabilitiesService, CapabilitiesSetup } from '..';
 import { createHttpServer } from '../../http/test_utils';
+import { dynamicConfigServiceMock } from '../../config/dynamic_config_service.mock';
 
 const coreId = Symbol('core');
 
@@ -59,9 +60,12 @@ describe('CapabilitiesService', () => {
       env,
       logger: loggingSystemMock.create(),
       configService: {} as any,
+      dynamicConfigService: dynamicConfigServiceMock.create(),
     });
     serviceSetup = await service.setup({ http: httpSetup });
-    await server.start();
+    await server.start({
+      dynamicConfigService: dynamicConfigServiceMock.createInternalStartContract(),
+    });
   });
 
   afterEach(async () => {
@@ -79,6 +83,7 @@ describe('CapabilitiesService', () => {
                 "catalogue": Object {},
                 "management": Object {},
                 "navLinks": Object {},
+                "workspaces": Object {},
               }
           `);
     });
@@ -101,6 +106,7 @@ describe('CapabilitiesService', () => {
           },
           "management": Object {},
           "navLinks": Object {},
+          "workspaces": Object {},
         }
       `);
     });

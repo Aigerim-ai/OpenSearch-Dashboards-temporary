@@ -30,7 +30,22 @@
 
 import { BehaviorSubject } from 'rxjs';
 import type { PublicMethodsOf } from '@osd/utility-types';
-import { ChromeBadge, ChromeBrand, ChromeBreadcrumb, ChromeService, InternalChromeStart } from './';
+import { ChromeBadge, ChromeBreadcrumb, ChromeService, InternalChromeStart } from './';
+import { getLogosMock } from '../../common/mocks';
+
+const createSetupContractMock = () => {
+  return {
+    registerCollapsibleNavHeader: jest.fn(),
+    navGroup: {
+      addNavLinksToGroup: jest.fn(),
+      getNavGroupEnabled: jest.fn(),
+      registerNavGroupUpdater: jest.fn(),
+    },
+    globalSearch: {
+      registerSearchCommand: jest.fn(),
+    },
+  };
+};
 
 const createStartContractMock = () => {
   const startContract: DeeplyMockedKeys<InternalChromeStart> = {
@@ -54,19 +69,33 @@ const createStartContractMock = () => {
       change: jest.fn(),
       reset: jest.fn(),
     },
+    logos: getLogosMock.default,
     navControls: {
       registerLeft: jest.fn(),
       registerCenter: jest.fn(),
       registerRight: jest.fn(),
+      registerLeftBottom: jest.fn(),
+      registerPrimaryHeaderRight: jest.fn(),
       getLeft$: jest.fn(),
       getCenter$: jest.fn(),
       getRight$: jest.fn(),
+      getLeftBottom$: jest.fn(),
+      getPrimaryHeaderRight$: jest.fn(),
+    },
+    navGroup: {
+      getNavGroupsMap$: jest.fn(() => new BehaviorSubject({})),
+      getNavGroupEnabled: jest.fn(),
+      getCurrentNavGroup$: jest.fn(() => new BehaviorSubject(undefined)),
+      setCurrentNavGroup: jest.fn(),
+    },
+    globalSearch: {
+      getAllSearchCommands: jest.fn(() => []),
     },
     setAppTitle: jest.fn(),
-    setBrand: jest.fn(),
-    getBrand$: jest.fn(),
     setIsVisible: jest.fn(),
     getIsVisible$: jest.fn(),
+    setHeaderVariant: jest.fn(),
+    getHeaderVariant$: jest.fn(),
     addApplicationClass: jest.fn(),
     removeApplicationClass: jest.fn(),
     getApplicationClasses$: jest.fn(),
@@ -74,6 +103,8 @@ const createStartContractMock = () => {
     setBadge: jest.fn(),
     getBreadcrumbs$: jest.fn(),
     setBreadcrumbs: jest.fn(),
+    getBreadcrumbsEnricher$: jest.fn(),
+    setBreadcrumbsEnricher: jest.fn(),
     getHelpExtension$: jest.fn(),
     setHelpExtension: jest.fn(),
     setHelpSupportUrl: jest.fn(),
@@ -82,8 +113,8 @@ const createStartContractMock = () => {
     setCustomNavLink: jest.fn(),
   };
   startContract.navLinks.getAll.mockReturnValue([]);
-  startContract.getBrand$.mockReturnValue(new BehaviorSubject({} as ChromeBrand));
   startContract.getIsVisible$.mockReturnValue(new BehaviorSubject(false));
+  startContract.getHeaderVariant$.mockReturnValue(new BehaviorSubject(undefined));
   startContract.getApplicationClasses$.mockReturnValue(new BehaviorSubject(['class-name']));
   startContract.getBadge$.mockReturnValue(new BehaviorSubject({} as ChromeBadge));
   startContract.getBreadcrumbs$.mockReturnValue(new BehaviorSubject([{} as ChromeBreadcrumb]));
@@ -96,6 +127,7 @@ const createStartContractMock = () => {
 type ChromeServiceContract = PublicMethodsOf<ChromeService>;
 const createMock = () => {
   const mocked: jest.Mocked<ChromeServiceContract> = {
+    setup: jest.fn(),
     start: jest.fn(),
     stop: jest.fn(),
   };
@@ -106,4 +138,5 @@ const createMock = () => {
 export const chromeServiceMock = {
   create: createMock,
   createStartContract: createStartContractMock,
+  createSetupContract: createSetupContractMock,
 };

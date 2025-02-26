@@ -36,6 +36,9 @@ const names: Record<string, string> = {
   general: i18n.translate('advancedSettings.categoryNames.generalLabel', {
     defaultMessage: 'General',
   }),
+  appearance: i18n.translate('advancedSettings.categoryNames.appearanceLabel', {
+    defaultMessage: 'Appearance',
+  }),
   timeline: i18n.translate('advancedSettings.categoryNames.timelineLabel', {
     defaultMessage: 'Timeline',
   }),
@@ -44,6 +47,9 @@ const names: Record<string, string> = {
   }),
   visualizations: i18n.translate('advancedSettings.categoryNames.visualizationsLabel', {
     defaultMessage: 'Visualizations',
+  }),
+  visbuilder: i18n.translate('advancedSettings.categoryNames.visbuilderLabel', {
+    defaultMessage: 'VisBuilder',
   }),
   discover: i18n.translate('advancedSettings.categoryNames.discoverLabel', {
     defaultMessage: 'Discover',

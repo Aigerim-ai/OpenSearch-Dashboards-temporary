@@ -38,6 +38,7 @@ import { SavedObjectsClient } from '../saved_objects';
 import { savedObjectsClientMock } from '../saved_objects/service/saved_objects_client.mock';
 import { UiSettingsClient } from './ui_settings_client';
 import { CannotOverrideError } from './ui_settings_errors';
+import { CURRENT_USER_PLACEHOLDER } from './utils';
 
 const logger = loggingSystemMock.create().get();
 
@@ -105,6 +106,26 @@ describe('ui settings', () => {
       });
     });
 
+    it('updates several values in one operation includes user level settings', async () => {
+      const value = chance.word();
+      const defaults = { key: { value, scope: 'user' } };
+      const { uiSettings, savedObjectsClient } = setup({ defaults });
+      await uiSettings.setMany({ one: 'value', another: 'val', key: 'value' });
+
+      expect(savedObjectsClient.update).toHaveBeenCalledTimes(2);
+      expect(savedObjectsClient.update).toHaveBeenCalledWith(TYPE, ID, {
+        one: 'value',
+        another: 'val',
+      });
+      expect(savedObjectsClient.update).toHaveBeenCalledWith(
+        TYPE,
+        `${CURRENT_USER_PLACEHOLDER}_${ID}`,
+        {
+          key: 'value',
+        }
+      );
+    });
+
     it('automatically creates the savedConfig if it is missing', async () => {
       const { uiSettings, savedObjectsClient, createOrUpgradeSavedConfig } = setup();
       savedObjectsClient.update
@@ -168,7 +189,7 @@ describe('ui settings', () => {
           foo: 1,
         })
       ).rejects.toMatchInlineSnapshot(
-        `[Error: [validation [foo]]: expected value of type [string] but got [number]]`
+        `[ValidationError: [validation [foo]]: expected value of type [string] but got [number]]`
       );
 
       expect(savedObjectsClient.update).toHaveBeenCalledTimes(0);
@@ -196,7 +217,7 @@ describe('ui settings', () => {
       const { uiSettings, savedObjectsClient } = setup({ defaults });
 
       await expect(uiSettings.set('foo', 1)).rejects.toMatchInlineSnapshot(
-        `[Error: [validation [foo]]: expected value of type [string] but got [number]]`
+        `[ValidationError: [validation [foo]]: expected value of type [string] but got [number]]`
       );
 
       expect(savedObjectsClient.update).toHaveBeenCalledTimes(0);
@@ -333,13 +354,36 @@ describe('ui settings', () => {
     });
   });
 
+  describe('#getOverrideOrDefault()', () => {
+    it('returns the non-overridden default settings passed within the constructor', () => {
+      const value = chance.word();
+      const defaults = { key: { value } };
+      const { uiSettings } = setup({ defaults });
+      expect(uiSettings.getOverrideOrDefault('key')).toEqual(value);
+      expect(uiSettings.getOverrideOrDefault('unknown')).toBeUndefined();
+    });
+
+    it('returns the overridden settings passed within the constructor', () => {
+      const value = chance.word();
+      const override = chance.word();
+      const defaults = { key: { value } };
+      const overrides = { key: override };
+      const { uiSettings } = setup({ defaults, overrides });
+      expect(uiSettings.getOverrideOrDefault('key')).toEqual(override);
+    });
+  });
+
   describe('#getUserProvided()', () => {
     it('pulls user configuration from OpenSearch', async () => {
       const { uiSettings, savedObjectsClient } = setup();
       await uiSettings.getUserProvided();
 
-      expect(savedObjectsClient.get).toHaveBeenCalledTimes(1);
+      expect(savedObjectsClient.get).toHaveBeenCalledTimes(2);
       expect(savedObjectsClient.get).toHaveBeenCalledWith(TYPE, ID);
+      expect(savedObjectsClient.get).toHaveBeenCalledWith(
+        TYPE,
+        `${CURRENT_USER_PLACEHOLDER}_${ID}`
+      );
     });
 
     it('returns user configuration', async () => {
@@ -389,7 +433,10 @@ describe('ui settings', () => {
       expect(loggingSystemMock.collect(logger).warn).toMatchInlineSnapshot(`
         Array [
           Array [
-            "Ignore invalid UiSettings value. Error: [validation [id]]: expected value of type [number] but got [string].",
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
+          ],
+          Array [
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
           ],
         ]
       `);
@@ -400,11 +447,13 @@ describe('ui settings', () => {
       savedObjectsClient.get = jest
         .fn()
         .mockRejectedValueOnce(SavedObjectsClient.errors.createGenericNotFoundError())
+        .mockResolvedValueOnce({ attributes: {} })
+        .mockRejectedValueOnce(SavedObjectsClient.errors.createGenericNotFoundError())
         .mockResolvedValueOnce({ attributes: {} });
 
       expect(await uiSettings.getUserProvided()).toStrictEqual({});
 
-      expect(savedObjectsClient.get).toHaveBeenCalledTimes(2);
+      expect(savedObjectsClient.get).toHaveBeenCalledTimes(3);
 
       expect(createOrUpgradeSavedConfig).toHaveBeenCalledTimes(1);
       expect(createOrUpgradeSavedConfig).toHaveBeenCalledWith(
@@ -499,8 +548,12 @@ describe('ui settings', () => {
       const opensearchDocSource = {};
       const { uiSettings, savedObjectsClient } = setup({ opensearchDocSource });
       await uiSettings.getAll();
-      expect(savedObjectsClient.get).toHaveBeenCalledTimes(1);
+      expect(savedObjectsClient.get).toHaveBeenCalledTimes(2);
       expect(savedObjectsClient.get).toHaveBeenCalledWith(TYPE, ID);
+      expect(savedObjectsClient.get).toHaveBeenCalledWith(
+        TYPE,
+        `${CURRENT_USER_PLACEHOLDER}_${ID}`
+      );
     });
 
     it('returns defaults when opensearch doc is empty', async () => {
@@ -531,7 +584,10 @@ describe('ui settings', () => {
       expect(loggingSystemMock.collect(logger).warn).toMatchInlineSnapshot(`
         Array [
           Array [
-            "Ignore invalid UiSettings value. Error: [validation [id]]: expected value of type [number] but got [string].",
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
+          ],
+          Array [
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
           ],
         ]
       `);
@@ -580,6 +636,62 @@ describe('ui settings', () => {
         bar: 'user-provided',
       });
     });
+
+    // verify user level settings override global
+    it(`user level values will override global settings`, async () => {
+      const defaults = {
+        foo: {
+          value: 'default',
+        },
+        bar: {
+          value: 'default',
+          scope: 'user',
+        },
+      };
+
+      const { uiSettings, savedObjectsClient } = setup({ defaults });
+
+      savedObjectsClient.get.mockImplementation((_type, id, _options) => {
+        if (id === `${CURRENT_USER_PLACEHOLDER}_${ID}`) {
+          return Promise.resolve({
+            attributes: {
+              bar: 'my personal value',
+            },
+          } as any);
+        } else {
+          return Promise.resolve({
+            attributes: {
+              foo: 'default1',
+              bar: 'global value',
+            },
+          } as any);
+        }
+      });
+
+      expect(await uiSettings.getAll()).toStrictEqual({
+        foo: 'default1',
+        bar: 'my personal value',
+      });
+    });
+  });
+
+  describe('#getDefault()', () => {
+    it(`returns the promised value for a key`, async () => {
+      const opensearchDocSource = {};
+      const defaults = { dateFormat: { value: chance.word() } };
+      const { uiSettings } = setup({ opensearchDocSource, defaults });
+      const result = uiSettings.getDefault('dateFormat');
+
+      expect(result).toBe(defaults.dateFormat.value);
+    });
+
+    it(`returns undefined for undefined defaults`, async () => {
+      const opensearchDocSource = { custom: 'value' };
+      const { uiSettings } = setup({ opensearchDocSource });
+      const result = uiSettings.getDefault('custom');
+
+      expect(result).toBe(undefined);
+    });
   });
 
   describe('#get()', () => {
@@ -588,8 +700,12 @@ describe('ui settings', () => {
       const { uiSettings, savedObjectsClient } = setup({ opensearchDocSource });
       await uiSettings.get('any');
 
-      expect(savedObjectsClient.get).toHaveBeenCalledTimes(1);
+      expect(savedObjectsClient.get).toHaveBeenCalledTimes(2);
       expect(savedObjectsClient.get).toHaveBeenCalledWith(TYPE, ID);
+      expect(savedObjectsClient.get).toHaveBeenCalledWith(
+        TYPE,
+        `${CURRENT_USER_PLACEHOLDER}_${ID}`
+      );
     });
 
     it(`returns the promised value for a key`, async () => {
@@ -625,7 +741,7 @@ describe('ui settings', () => {
     });
 
     it('returns the overridden value for key theme:version', async () => {
-      const opensearchDocSource = { 'theme:version': 'v8 (beta)' };
+      const opensearchDocSource = { 'theme:version': 'Next (preview)' };
       const overrides = { 'theme:version': 'v7' };
       const { uiSettings } = setup({ opensearchDocSource, overrides });
 
@@ -641,10 +757,10 @@ describe('ui settings', () => {
     });
 
     it('rewrites the key theme:version value without override', async () => {
-      const opensearchDocSource = { 'theme:version': 'v8 (beta)' };
+      const opensearchDocSource = { 'theme:version': 'Next (preview)' };
       const { uiSettings } = setup({ opensearchDocSource });
 
-      expect(await uiSettings.get('theme:version')).toBe('v8 (beta)');
+      expect(await uiSettings.get('theme:version')).toBe('Next (preview)');
     });
 
     it('returns the default value for an override with value null', async () => {
@@ -682,7 +798,10 @@ describe('ui settings', () => {
       expect(loggingSystemMock.collect(logger).warn).toMatchInlineSnapshot(`
         Array [
           Array [
-            "Ignore invalid UiSettings value. Error: [validation [id]]: expected value of type [number] but got [string].",
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
+          ],
+          Array [
+            "Ignore invalid UiSettings value. ValidationError: [validation [id]]: expected value of type [number] but got [string].",
           ],
         ]
       `);

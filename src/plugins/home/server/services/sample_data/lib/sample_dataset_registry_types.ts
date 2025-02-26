@@ -71,12 +71,19 @@ export interface DataIndexSchema {
   // Set to true to move timestamp to current week, preserving day of week and time of day
   // Relative distance from timestamp to currentTimeMarker will not remain the same
   preserveDayOfWeekTimeOfDay: boolean;
+
+  // Optional indexName field, if added wouldn't all flow would use this name
+  // `createIndexName` wouldn't be used
+  indexName?: string;
 }
 
 export interface AppLinkSchema {
   path: string;
   icon: string;
   label: string;
+  // Alternative app path when new nav flag is enabled
+  newPath?: string;
+  appendDatasourceToPath?: boolean;
 }
 
 export interface SampleDatasetSchema<T = unknown> {
@@ -85,17 +92,25 @@ export interface SampleDatasetSchema<T = unknown> {
   description: string;
   previewImagePath: string;
   darkPreviewImagePath: string;
+  hasNewThemeImages?: boolean;
 
   // saved object id of main dashboard for sample data set
   overviewDashboard: string;
+  getDataSourceIntegratedDashboard: (dataSourceId?: string, workspaceId?: string) => string;
   appLinks: AppLinkSchema[];
 
   // saved object id of default index-pattern for sample data set
   defaultIndex: string;
+  getDataSourceIntegratedDefaultIndex: (dataSourceId?: string, workspaceId?: string) => string;
 
   // OpenSearch Dashboards saved objects (index patter, visualizations, dashboard, ...)
   // Should provide a nice demo of OpenSearch Dashboards's functionality with the sample data set
   savedObjects: Array<SavedObject<T>>;
+  getDataSourceIntegratedSavedObjects: (
+    dataSourceId?: string,
+    dataSourceTitle?: string
+  ) => Array<SavedObject<T>>;
+  getWorkspaceIntegratedSavedObjects: (workspaceId: string) => Array<SavedObject<T>>;
   dataIndices: DataIndexSchema[];
   status?: string | undefined;
   statusMsg?: unknown;

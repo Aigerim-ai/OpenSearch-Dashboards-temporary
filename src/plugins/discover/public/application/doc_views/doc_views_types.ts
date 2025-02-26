@@ -29,18 +29,12 @@
  */
 
 import { ComponentType } from 'react';
-import { IScope } from 'angular';
 import { SearchResponse } from 'elasticsearch';
 import { IndexPattern } from '../../../../data/public';
 
-export interface AngularDirective {
-  controller: (...injectedServices: any[]) => void;
-  template: string;
-}
-
-export type AngularScope = IScope;
-
-export type OpenSearchSearchHit<T = unknown> = SearchResponse<T>['hits']['hits'][number];
+export type OpenSearchSearchHit<T = unknown> = SearchResponse<T>['hits']['hits'][number] & {
+  isAnchor?: boolean;
+};
 
 export interface FieldMapping {
   filterable?: boolean;
@@ -72,7 +66,6 @@ export type DocViewRenderFn = (
 
 export interface DocViewInput {
   component?: DocViewerComponent;
-  directive?: AngularDirective;
   order: number;
   render?: DocViewRenderFn;
   shouldShow?: (hit: OpenSearchSearchHit) => boolean;

@@ -28,8 +28,12 @@
  * under the License.
  */
 
+import { dynamicConfigServiceMock } from '../config/dynamic_config_service.mock';
+
 jest.mock('../../../legacy/server/osd_server');
 jest.mock('./cluster_manager');
+
+import '@osd/optimizer/target/__mocks__/lmdb';
 
 import { BehaviorSubject, throwError } from 'rxjs';
 import { REPO_ROOT } from '@osd/dev-utils';
@@ -58,6 +62,8 @@ import { statusServiceMock } from '../status/status_service.mock';
 import { auditTrailServiceMock } from '../audit_trail/audit_trail_service.mock';
 import { loggingServiceMock } from '../logging/logging_service.mock';
 import { metricsServiceMock } from '../metrics/metrics_service.mock';
+import { securityServiceMock } from '../security/security_service.mock';
+import { workspaceServiceMock } from '../workspace/mocks';
 
 const MockOsdServer: jest.Mock<OsdServer> = OsdServer as any;
 
@@ -72,6 +78,7 @@ let startDeps: LegacyServiceStartDeps;
 const logger = loggingSystemMock.create();
 let configService: ReturnType<typeof configServiceMock.create>;
 let environmentSetup: ReturnType<typeof environmentServiceMock.createSetupContract>;
+const dynamicConfigService = dynamicConfigServiceMock.create();
 
 beforeEach(() => {
   coreId = Symbol();
@@ -106,6 +113,9 @@ beforeEach(() => {
       auditTrail: auditTrailServiceMock.createSetupContract(),
       logging: loggingServiceMock.createInternalSetupContract(),
       metrics: metricsServiceMock.createInternalSetupContract(),
+      security: securityServiceMock.createSetupContract(),
+      dynamicConfig: dynamicConfigServiceMock.createInternalSetupContract(),
+      workspace: workspaceServiceMock.createInternalSetupContract(),
     },
     plugins: { 'plugin-id': 'plugin-value' },
     uiPlugins: {
@@ -155,6 +165,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService,
+      dynamicConfigService,
     });
 
     await legacyService.setupLegacyConfig();
@@ -187,6 +198,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
     await legacyService.setupLegacyConfig();
     await legacyService.setup(setupDeps);
@@ -217,6 +229,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
 
     await legacyService.setupLegacyConfig();
@@ -237,6 +250,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
 
     await expect(legacyService.setupLegacyConfig()).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -259,6 +273,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
     await legacyService.setupLegacyConfig();
     await legacyService.setup(setupDeps);
@@ -280,6 +295,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
     await legacyService.setupLegacyConfig();
     await legacyService.setup(setupDeps);
@@ -305,6 +321,7 @@ describe('once LegacyService is set up with connection info', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
     await legacyService.setupLegacyConfig();
     await legacyService.setup(setupDeps);
@@ -325,7 +342,13 @@ describe('once LegacyService is set up with connection info', () => {
 describe('once LegacyService is set up without connection info', () => {
   let legacyService: LegacyService;
   beforeEach(async () => {
-    legacyService = new LegacyService({ coreId, env, logger, configService: configService as any });
+    legacyService = new LegacyService({
+      coreId,
+      env,
+      logger,
+      configService: configService as any,
+      dynamicConfigService,
+    });
     await legacyService.setupLegacyConfig();
     await legacyService.setup(setupDeps);
     await legacyService.start(startDeps);
@@ -379,6 +402,7 @@ describe('once LegacyService is set up in `devClusterMaster` mode', () => {
       ),
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
 
     await devClusterLegacyService.setupLegacyConfig();
@@ -409,6 +433,7 @@ describe('once LegacyService is set up in `devClusterMaster` mode', () => {
       ),
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
 
     await devClusterLegacyService.setupLegacyConfig();
@@ -434,6 +459,7 @@ describe('start', () => {
       env,
       logger,
       configService: configService as any,
+      dynamicConfigService,
     });
     await expect(legacyService.start(startDeps)).rejects.toThrowErrorMatchingInlineSnapshot(
       `"Legacy service is not setup yet."`
@@ -448,6 +474,7 @@ test('Sets the server.uuid property on the legacy configuration', async () => {
     env,
     logger,
     configService: configService as any,
+    dynamicConfigService,
   });
 
   environmentSetup.instanceUuid = 'UUID_FROM_SERVICE';

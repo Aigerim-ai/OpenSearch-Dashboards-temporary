@@ -33,6 +33,8 @@ import moment from 'moment';
 import { formatExpression, SerializedFieldFormat } from '../../../../plugins/expressions/public';
 import { IAggConfig, search, TimefilterContract } from '../../../../plugins/data/public';
 import { Vis, VisParams } from '../types';
+import { VisAugmenterEmbeddableConfig, VisLayers } from '../../../../plugins/vis_augmenter/public';
+
 const { isDateHistogramBucketAggConfig } = search.aggs;
 
 interface SchemaConfigParams {
@@ -85,6 +87,8 @@ export interface BuildPipelineParams {
   timefilter: TimefilterContract;
   timeRange?: any;
   abortSignal?: AbortSignal;
+  visLayers?: VisLayers;
+  visAugmenterConfig?: VisAugmenterEmbeddableConfig;
 }
 
 const vislibCharts: string[] = [
@@ -331,7 +335,20 @@ const buildVisConfig: BuildVisConfigFunction = {
   },
 };
 
-export const buildVislibDimensions = async (vis: any, params: BuildPipelineParams) => {
+export interface VislibDimensions {
+  x: any;
+  y: SchemaConfig[];
+  z?: any[];
+  width?: any[];
+  series?: any[];
+  splitRow?: any[];
+  splitColumn?: any[];
+}
+
+export const buildVislibDimensions = async (
+  vis: any,
+  params: BuildPipelineParams
+): Promise<VislibDimensions> => {
   const schemas = getSchemas(vis, {
     timeRange: params.timeRange,
     timefilter: params.timefilter,
@@ -373,8 +390,8 @@ export const buildVislibDimensions = async (vis: any, params: BuildPipelineParam
 
 export const buildPipeline = async (vis: Vis, params: BuildPipelineParams) => {
   const { indexPattern, searchSource } = vis.data;
-  const query = searchSource!.getField('query');
-  const filters = searchSource!.getField('filter');
+  const query = searchSource?.getField('query');
+  const filters = searchSource?.getField('filter');
   const { uiState, title } = vis;
 
   // context

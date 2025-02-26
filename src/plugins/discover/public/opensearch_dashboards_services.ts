@@ -37,24 +37,10 @@ import { createGetterSetter } from '../../opensearch_dashboards_utils/public';
 import { search } from '../../data/public';
 import { DocViewsRegistry } from './application/doc_views/doc_views_registry';
 import { DocViewsLinksRegistry } from './application/doc_views_links/doc_views_links_registry';
+import { UsageCollectionSetup } from '../../usage_collection/public';
 
-let angularModule: any = null;
 let services: DiscoverServices | null = null;
 let uiActions: UiActionsStart;
-
-/**
- * set bootstrapped inner angular module
- */
-export function setAngularModule(module: any) {
-  angularModule = module;
-}
-
-/**
- * get boostrapped inner angular module
- */
-export function getAngularModule() {
-  return angularModule;
-}
 
 export function getServices(): DiscoverServices {
   if (!services) {
@@ -74,11 +60,6 @@ export const [getHeaderActionMenuMounter, setHeaderActionMenuMounter] = createGe
   AppMountParameters['setHeaderActionMenu']
 >('headerActionMenuMounter');
 
-export const [getUrlTracker, setUrlTracker] = createGetterSetter<{
-  setTrackedUrl: (url: string) => void;
-  restorePreviousUrl: () => void;
-}>('urlTracker');
-
 export const [getDocViewsRegistry, setDocViewsRegistry] = createGetterSetter<DocViewsRegistry>(
   'DocViewsRegistry'
 );
@@ -86,6 +67,11 @@ export const [getDocViewsRegistry, setDocViewsRegistry] = createGetterSetter<Doc
 export const [getDocViewsLinksRegistry, setDocViewsLinksRegistry] = createGetterSetter<
   DocViewsLinksRegistry
 >('DocViewsLinksRegistry');
+
+export const [getUsageCollector, setUsageCollector] = createGetterSetter<UsageCollectionSetup>(
+  'UsageCollector'
+);
+
 /**
  * Makes sure discover and context are using one instance of history.
  */
@@ -110,11 +96,7 @@ export const [getScopedHistory, setScopedHistory] = createGetterSetter<ScopedHis
 
 export const { getRequestInspectorStats, getResponseInspectorStats, tabifyAggResponse } = search;
 export { unhashUrl, redirectWhenMissing } from '../../opensearch_dashboards_utils/public';
-export {
-  formatMsg,
-  formatStack,
-  subscribeWithScope,
-} from '../../opensearch_dashboards_legacy/public';
+export { formatMsg, formatStack } from '../../opensearch_dashboards_legacy/public';
 
 // EXPORT types
 export {

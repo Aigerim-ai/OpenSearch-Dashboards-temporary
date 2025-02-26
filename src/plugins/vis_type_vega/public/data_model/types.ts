@@ -32,13 +32,15 @@ import { SearchResponse, SearchParams } from 'elasticsearch';
 
 import { Filter } from 'src/plugins/data/public';
 import { DslQuery } from 'src/plugins/data/common';
+import { Signal } from 'vega';
+import { VisAugmenterEmbeddableConfig, VisLayerTypes } from 'src/plugins/vis_augmenter/public';
 import { OpenSearchQueryParser } from './opensearch_query_parser';
 import { EmsFileParser } from './ems_file_parser';
 import { UrlParser } from './url_parser';
 
 interface Body {
   aggs?: SearchParams['body']['aggs'];
-  query?: Query;
+  query?: Query | string;
   timeout?: string;
 }
 
@@ -113,6 +115,9 @@ export interface OpenSearchDashboards {
   hideWarnings: boolean;
   type: string;
   renderer: Renderer;
+  visibleVisLayers?: Map<VisLayerTypes, boolean>;
+  signals?: { [markId: string]: Signal[] };
+  visAugmenterConfig?: VisAugmenterEmbeddableConfig;
 }
 
 export interface VegaSpec {
@@ -181,6 +186,7 @@ export interface UrlObject {
   [CONSTANTS.TYPE]?: string;
   name?: string;
   index?: string;
+  data_source_name?: string;
   body?: Body;
   size?: number;
   timeout?: string;
@@ -208,6 +214,7 @@ export type OpenSearchQueryRequest = Requests;
 export type EmsQueryRequest = Requests & {
   obj: UrlObject;
 };
+export type PPLQueryRequest = Requests;
 
 export interface ContextVarsObject {
   [index: string]: any;

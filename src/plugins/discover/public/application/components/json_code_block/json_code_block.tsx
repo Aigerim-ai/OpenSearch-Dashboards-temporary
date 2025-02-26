@@ -31,6 +31,7 @@
 import React from 'react';
 import { EuiCodeBlock } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
+import { stringify } from '@osd/std';
 import { DocViewRenderProps } from '../../doc_views/doc_views_types';
 
 export function JsonCodeBlock({ hit }: DocViewRenderProps) {
@@ -38,8 +39,8 @@ export function JsonCodeBlock({ hit }: DocViewRenderProps) {
     defaultMessage: 'Read only JSON view of an opensearch document',
   });
   return (
-    <EuiCodeBlock aria-label={label} language="json" isCopyable paddingSize="s">
-      {JSON.stringify(hit, null, 2)}
+    <EuiCodeBlock aria-label={label} language="json" isCopyable paddingSize="s" fontSize="s">
+      {stringify(hit, null, 2)}
     </EuiCodeBlock>
   );
 }

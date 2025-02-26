@@ -42,9 +42,9 @@ import {
   EuiFlexGroup,
   EuiFlexItem,
   EuiFormLabel,
-  EuiTextArea,
+  EuiCompressedTextArea,
   EuiLink,
-  EuiFormRow,
+  EuiCompressedFormRow,
   EuiCode,
   EuiSpacer,
 } from '@elastic/eui';
@@ -114,7 +114,7 @@ export function MathAgg(props) {
         </EuiFlexItem>
 
         <EuiFlexItem>
-          <EuiFormRow
+          <EuiCompressedFormRow
             id="mathExpressionInput"
             label={
               <FormattedMessage
@@ -134,12 +134,12 @@ export function MathAgg(props) {
                 values={{
                   link: (
                     <EuiLink
-                      href="https://github.com/elastic/tinymath/blob/master/docs/functions.md"
+                      href="https://mathjs.org/docs/reference/functions.html"
                       target="_blank"
                     >
                       <FormattedMessage
-                        id="visTypeTimeseries.math.expressionDescription.tinyMathLinkText"
-                        defaultMessage="TinyMath"
+                        id="visTypeTimeseries.math.expressionDescription.linkText"
+                        defaultMessage="Math.js"
                       />
                     </EuiLink>
                   ),
@@ -154,13 +154,13 @@ export function MathAgg(props) {
               />
             }
           >
-            <EuiTextArea
+            <EuiCompressedTextArea
               data-test-subj="mathExpression"
               onChange={handleTextChange('script')}
               fullWidth
               value={model.script}
             />
-          </EuiFormRow>
+          </EuiCompressedFormRow>
         </EuiFlexItem>
       </EuiFlexGroup>
     </AggRow>

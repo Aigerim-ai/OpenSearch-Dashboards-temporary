@@ -42,8 +42,9 @@ import { config } from '../plugins_config';
 import { loggingSystemMock } from '../../logging/logging_system.mock';
 import { environmentServiceMock } from '../../environment/environment_service.mock';
 import { coreMock } from '../../mocks';
-import { Plugin } from '../types';
+import { Plugin, CompatibleEnginePluginVersions } from '../types';
 import { PluginWrapper } from '../plugin';
+import { dynamicConfigServiceMock } from '../../config/dynamic_config_service.mock';
 
 describe('PluginsService', () => {
   const logger = loggingSystemMock.create();
@@ -57,6 +58,7 @@ describe('PluginsService', () => {
       disabled = false,
       version = 'some-version',
       requiredPlugins = [],
+      requiredEnginePlugins = {},
       requiredBundles = [],
       optionalPlugins = [],
       opensearchDashboardsVersion = '7.0.0',
@@ -68,6 +70,7 @@ describe('PluginsService', () => {
       disabled?: boolean;
       version?: string;
       requiredPlugins?: string[];
+      requiredEnginePlugins?: CompatibleEnginePluginVersions;
       requiredBundles?: string[];
       optionalPlugins?: string[];
       opensearchDashboardsVersion?: string;
@@ -84,6 +87,7 @@ describe('PluginsService', () => {
         configPath: `${configPath}${disabled ? '-disabled' : ''}`,
         opensearchDashboardsVersion,
         requiredPlugins,
+        requiredEnginePlugins,
         requiredBundles,
         optionalPlugins,
         server,
@@ -114,12 +118,14 @@ describe('PluginsService', () => {
     const rawConfigService = rawConfigServiceMock.create({ rawConfig$: config$ });
     const configService = new ConfigService(rawConfigService, env, logger);
     await configService.setSchema(config.path, config.schema);
+    const dynamicConfigService = dynamicConfigServiceMock.create();
 
     pluginsService = new PluginsService({
       coreId: Symbol('core'),
       env,
       logger,
       configService,
+      dynamicConfigService,
     });
   });
 

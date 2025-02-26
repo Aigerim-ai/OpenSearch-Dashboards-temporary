@@ -28,8 +28,10 @@
  * under the License.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { i18n } from '@osd/i18n';
+// @ts-expect-error
+import { saveAs } from '@elastic/filesaver';
 import { EuiFlexGroup, EuiFlexItem, EuiTitle, EuiPageContent } from '@elastic/eui';
 import { ConsoleHistory } from '../console_history';
 import { Editor } from '../editor';
@@ -41,6 +43,7 @@ import {
   HelpPanel,
   SomethingWentWrongCallout,
   NetworkRequestStatusBar,
+  ImportFlyout,
 } from '../../components';
 
 import { useServicesContext, useEditorReadContext, useRequestReadContext } from '../../contexts';
@@ -54,7 +57,7 @@ interface MainProps {
 
 export function Main({ dataSourceId }: MainProps) {
   const {
-    services: { storage },
+    services: { storage, objectStorageClient, uiSettings },
   } = useServicesContext();
 
   const { ready: editorsReady } = useEditorReadContext();
@@ -71,6 +74,14 @@ export function Main({ dataSourceId }: MainProps) {
   const [showingHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showImportFlyout, setShowImportFlyout] = useState(false);
+
+  const onExport = async () => {
+    const results = await objectStorageClient.text.findAll();
+    const senseData = results.sort((a, b) => a.createdAt - b.createdAt)[0];
+    const blob = new Blob([JSON.stringify(senseData || {})], { type: 'application/json' });
+    saveAs(blob, 'sense.json');
+  };
 
   const renderConsoleHistory = () => {
     return editorsReady ? <ConsoleHistory close={() => setShowHistory(false)} /> : null;
@@ -87,10 +98,31 @@ export function Main({ dataSourceId }: MainProps) {
 
   const lastDatum = requestData?.[requestData.length - 1] ?? requestError;
 
+  const useUpdatedUX = uiSettings.get('home:useNewHomePage');
+
+  const networkRequestStatusBarContent = (
+    <EuiFlexItem grow={false} className={useUpdatedUX ? '' : 'conApp__tabsExtension'}>
+      <NetworkRequestStatusBar
+        requestInProgress={requestInProgress}
+        requestResult={
+          lastDatum
+            ? {
+                method: lastDatum.request.method.toUpperCase(),
+                endpoint: lastDatum.request.path,
+                statusCode: lastDatum.response.statusCode,
+                statusText: lastDatum.response.statusText,
+                timeElapsedMs: lastDatum.response.timeMs,
+              }
+            : undefined
+        }
+      />
+    </EuiFlexItem>
+  );
+
   return (
     <div id="consoleRoot">
       <EuiFlexGroup
-        className="consoleContainer"
+        className={`consoleContainer useUpdatedUX-${!!useUpdatedUX}`}
         gutterSize="none"
         direction="column"
         responsive={false}
@@ -107,34 +139,24 @@ export function Main({ dataSourceId }: MainProps) {
             <EuiFlexItem>
               <TopNavMenu
                 disabled={!done}
+                useUpdatedUX={useUpdatedUX}
                 items={getTopNavConfig({
+                  useUpdatedUX,
                   onClickHistory: () => setShowHistory(!showingHistory),
                   onClickSettings: () => setShowSettings(true),
                   onClickHelp: () => setShowHelp(!showHelp),
+                  onClickExport: () => onExport(),
+                  onClickImport: () => setShowImportFlyout(!showImportFlyout),
                 })}
+                rightContainerChildren={networkRequestStatusBarContent}
               />
             </EuiFlexItem>
-            <EuiFlexItem grow={false} className="conApp__tabsExtension">
-              <NetworkRequestStatusBar
-                requestInProgress={requestInProgress}
-                requestResult={
-                  lastDatum
-                    ? {
-                        method: lastDatum.request.method.toUpperCase(),
-                        endpoint: lastDatum.request.path,
-                        statusCode: lastDatum.response.statusCode,
-                        statusText: lastDatum.response.statusText,
-                        timeElapsedMs: lastDatum.response.timeMs,
-                      }
-                    : undefined
-                }
-              />
-            </EuiFlexItem>
+            {useUpdatedUX ? null : networkRequestStatusBarContent}
           </EuiFlexGroup>
         </EuiFlexItem>
         {showingHistory ? <EuiFlexItem grow={false}>{renderConsoleHistory()}</EuiFlexItem> : null}
         <EuiFlexItem>
-          <Editor loading={!done} dataSourceId={dataSourceId} />
+          <Editor useUpdatedUX={useUpdatedUX} loading={!done} dataSourceId={dataSourceId} />
         </EuiFlexItem>
       </EuiFlexGroup>
 
@@ -152,6 +174,10 @@ export function Main({ dataSourceId }: MainProps) {
       ) : null}
 
       {showHelp ? <HelpPanel onClose={() => setShowHelp(false)} /> : null}
+
+      {showImportFlyout ? (
+        <ImportFlyout refresh={retry} close={() => setShowImportFlyout(false)} />
+      ) : null}
     </div>
   );
 }

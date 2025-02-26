@@ -24,14 +24,15 @@ import {
   UsernamePasswordTypedContent,
 } from '../../common/data_sources';
 import { EncryptionContext, CryptographyServiceSetup } from '../cryptography_service';
+import { isValidURL } from '../util/endpoint_validator';
+import { IAuthenticationMethodRegistry } from '../auth_registry';
+import { DATA_SOURCE_TITLE_LENGTH_LIMIT } from '../util/constants';
 
 /**
  * Describes the Credential Saved Objects Client Wrapper class,
  * which contains the factory used to create Saved Objects Client Wrapper instances
  */
 export class DataSourceSavedObjectsClientWrapper {
-  constructor(private cryptography: CryptographyServiceSetup, private logger: Logger) {}
-
   /**
    * Describes the factory used to create instances of Saved Objects Client Wrappers
    * for data source specific operations such as credentials encryption
@@ -138,17 +139,15 @@ export class DataSourceSavedObjectsClientWrapper {
     };
   };
 
-  private isValidUrl(endpoint: string) {
-    try {
-      const url = new URL(endpoint);
-      return Boolean(url) && (url.protocol === 'http:' || url.protocol === 'https:');
-    } catch (e) {
-      return false;
-    }
-  }
+  constructor(
+    private cryptography: CryptographyServiceSetup,
+    private logger: Logger,
+    private authRegistryPromise: Promise<IAuthenticationMethodRegistry>,
+    private endpointBlockedIps?: string[]
+  ) {}
 
   private async validateAndEncryptAttributes<T = unknown>(attributes: T) {
-    this.validateAttributes(attributes);
+    await this.validateAttributes(attributes);
 
     const { endpoint, auth } = attributes;
 
@@ -174,6 +173,9 @@ export class DataSourceSavedObjectsClientWrapper {
           auth: await this.encryptSigV4Credential(auth, { endpoint }),
         };
       default:
+        if (await this.isAuthTypeAvailableInRegistry(auth.type)) {
+          return attributes;
+        }
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${auth.type}'`);
     }
   }
@@ -242,30 +244,47 @@ export class DataSourceSavedObjectsClientWrapper {
           return attributes;
         }
       default:
+        if (await this.isAuthTypeAvailableInRegistry(auth.type)) {
+          return attributes;
+        }
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid credentials type: '${type}'`);
     }
   }
 
-  private validateAttributes<T = unknown>(attributes: T) {
+  private async validateAttributes<T = unknown>(attributes: T) {
     const { title, endpoint, auth } = attributes;
-    if (!title?.trim?.().length) {
+    this.validateTitle(title);
+    this.validateEndpoint(endpoint);
+    await this.validateAuth(auth);
+  }
+
+  private validateEndpoint(endpoint: string) {
+    if (!isValidURL(endpoint, this.endpointBlockedIps)) {
+      throw SavedObjectsErrorHelpers.createBadRequestError(
+        '"endpoint" attribute is not valid or allowed'
+      );
+    }
+  }
+
+  private validateTitle(title: string) {
+    if (!title.trim().length) {
       throw SavedObjectsErrorHelpers.createBadRequestError(
         '"title" attribute must be a non-empty string'
       );
     }
 
-    if (!this.isValidUrl(endpoint)) {
-      throw SavedObjectsErrorHelpers.createBadRequestError('"endpoint" attribute is not valid');
+    if (title.length > DATA_SOURCE_TITLE_LENGTH_LIMIT) {
+      throw SavedObjectsErrorHelpers.createBadRequestError(
+        `"title" attribute is limited to ${DATA_SOURCE_TITLE_LENGTH_LIMIT} characters`
+      );
     }
+  }
 
+  private async validateAuth<T = unknown>(auth: T) {
     if (!auth) {
       throw SavedObjectsErrorHelpers.createBadRequestError('"auth" attribute is required');
     }
 
-    this.validateAuth(auth);
-  }
-
-  private validateAuth<T = unknown>(auth: T) {
     const { type, credentials } = auth;
 
     if (!type) {
@@ -303,7 +322,7 @@ export class DataSourceSavedObjectsClientWrapper {
           );
         }
 
-        const { accessKey, secretKey, region } = credentials as SigV4Content;
+        const { accessKey, secretKey, region, service } = credentials as SigV4Content;
 
         if (!accessKey) {
           throw SavedObjectsErrorHelpers.createBadRequestError(
@@ -322,8 +341,17 @@ export class DataSourceSavedObjectsClientWrapper {
             '"auth.credentials.region" attribute is required'
           );
         }
+
+        if (!service) {
+          throw SavedObjectsErrorHelpers.createBadRequestError(
+            '"auth.credentials.service" attribute is required'
+          );
+        }
         break;
       default:
+        if (await this.isAuthTypeAvailableInRegistry(type)) {
+          break;
+        }
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${type}'`);
     }
   }
@@ -392,6 +420,9 @@ export class DataSourceSavedObjectsClientWrapper {
         encryptionContext = accessKeyEncryptionContext;
         break;
       default:
+        if (await this.isAuthTypeAvailableInRegistry(auth.type)) {
+          return attributes;
+        }
         throw SavedObjectsErrorHelpers.createBadRequestError(`Invalid auth type: '${auth.type}'`);
     }
 
@@ -459,7 +490,7 @@ export class DataSourceSavedObjectsClientWrapper {
 
   private async encryptSigV4Credential<T = unknown>(auth: T, encryptionContext: EncryptionContext) {
     const {
-      credentials: { accessKey, secretKey, region },
+      credentials: { accessKey, secretKey, region, service },
     } = auth;
 
     return {
@@ -468,7 +499,18 @@ export class DataSourceSavedObjectsClientWrapper {
         region,
         accessKey: await this.cryptography.encryptAndEncode(accessKey, encryptionContext),
         secretKey: await this.cryptography.encryptAndEncode(secretKey, encryptionContext),
+        service,
       },
     };
+  }
+
+  private async getAuthenticationMethodFromRegistry(type: string) {
+    const authMethod = (await this.authRegistryPromise).getAuthenticationMethod(type);
+    return authMethod;
+  }
+
+  private async isAuthTypeAvailableInRegistry(type: string): Promise<boolean> {
+    const authMethod = await this.getAuthenticationMethodFromRegistry(type);
+    return authMethod !== undefined;
   }
 }

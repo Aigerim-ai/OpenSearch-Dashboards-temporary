@@ -55,12 +55,19 @@ const dataIndexSchema = Joi.object({
   // Set to true to move timestamp to current week, preserving day of week and time of day
   // Relative distance from timestamp to currentTimeMarker will not remain the same
   preserveDayOfWeekTimeOfDay: Joi.boolean().default(false),
+
+  // Optional indexName field, if added wouldn't all flow would use this name
+  // `createIndexName` wouldn't be used
+  indexName: Joi.string(),
 });
 
 const appLinkSchema = Joi.object({
   path: Joi.string().required(),
   label: Joi.string().required(),
   icon: Joi.string().required(),
+  // Alternative app path when new nav flag is enabled
+  newPath: Joi.string(),
+  appendDatasourceToPath: Joi.string(),
 });
 
 export const sampleDataSchema = {
@@ -71,16 +78,23 @@ export const sampleDataSchema = {
   description: Joi.string().required(),
   previewImagePath: Joi.string().required(),
   darkPreviewImagePath: Joi.string(),
+  hasNewThemeImages: Joi.boolean(),
 
   // saved object id of main dashboard for sample data set
   overviewDashboard: Joi.string().required(),
+  getDataSourceIntegratedDashboard: Joi.func().required(),
   appLinks: Joi.array().items(appLinkSchema).default([]),
 
   // saved object id of default index-pattern for sample data set
   defaultIndex: Joi.string().required(),
+  getDataSourceIntegratedDefaultIndex: Joi.func().required(),
 
   // OpenSearch Dashboards saved objects (index patter, visualizations, dashboard, ...)
   // Should provide a nice demo of OpenSearch Dashboards's functionality with the sample data set
   savedObjects: Joi.array().items(Joi.object()).required(),
+  getDataSourceIntegratedSavedObjects: Joi.func().required(),
   dataIndices: Joi.array().items(dataIndexSchema).required(),
+
+  status: Joi.string(),
+  statusMsg: Joi.any(),
 };
